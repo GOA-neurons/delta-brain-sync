@@ -2,7 +2,7 @@ name: GOA Neural Evolution
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/30 * * * *'
 
 jobs:
   evolve:
@@ -12,8 +12,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm install firebase-admin pg
-      - name: Run Evolution Engine
+      - name: 📦 Install Library
+        run: |
+          npm init -y
+          npm install firebase-admin pg
+      - name: 🚀 Run Evolution
         run: node optimized_evolution.js
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_KEY }}
