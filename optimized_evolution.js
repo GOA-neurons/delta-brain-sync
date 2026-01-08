@@ -1,47 +1,33 @@
 const admin = require('firebase-admin');
 const { Client } = require('pg');
 
-// Check for secrets
-if (!process.env.FIREBASE_SERVICE_ACCOUNT || !process.env.NEON_DATABASE_URL) {
-    console.error("❌ Environment Variables are missing!");
-    process.exit(1);
-}
-
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-});
-
-const db = admin.firestore();
-
-async function startSync() {
-    const client = new Client({
-        connectionString: process.env.NEON_DATABASE_URL,
-        ssl: { rejectUnauthorized: false }
-    });
-
+async function run() {
     try {
+        console.log("🚀 Sync Started...");
+        const keyRaw = process.env.FIREBASE_SERVICE_ACCOUNT;
+        if (!keyRaw) throw new Error("FIREBASE_KEY is missing from GitHub Secrets!");
+
+        admin.initializeApp({
+            credential: admin.credential.cert(JSON.parse(keyRaw))
+        });
+        
+        const client = new Client({ 
+            connectionString: process.env.NEON_DATABASE_URL, 
+            ssl: { rejectUnauthorized: false } 
+        });
+        
         await client.connect();
         console.log("✅ Neon Connected!");
-
-        const snapshot = await db.collection('neurons').limit(5).get();
-        console.log(`📡 Found ${snapshot.size} neurons in Firestore`);
-
-        for (const doc of snapshot.docs) {
-            await client.query(
-                'INSERT INTO neurons (data) VALUES ($1)', 
-                [JSON.stringify(doc.data())]
-            );
-        }
-
-        console.log("🚀 Sync Completed Successfully!");
-    } catch (err) {
-        console.error("❌ Sync Failed:", err.message);
-        process.exit(1);
-    } finally {
+        
+        const db = admin.firestore();
+        const snap = await db.collection('neurons').limit(1).get();
+        console.log(`📡 Firebase Data: ${snap.size} docs found`);
+        
         await client.end();
+        console.log("🏁 SUCCESS!");
+    } catch (e) {
+        console.error("❌ CRITICAL ERROR:", e.message);
+        process.exit(1);
     }
 }
-
-startSync();
+run();
