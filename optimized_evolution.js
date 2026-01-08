@@ -2,14 +2,8 @@ const admin = require('firebase-admin');
 const { Client } = require('pg');
 
 async function run() {
-    // Timeout function: ၁ မိနစ်ကျော်ရင် ဇွတ်ရပ်ခိုင်းမယ်
-    const timeout = setTimeout(() => {
-        console.error("❌ Timeout: Process took too long!");
-        process.exit(1);
-    }, 60000);
-
     try {
-        console.log("🚀 Sync Started...");
+        console.log("🚀 Sync Process Starting...");
         admin.initializeApp({
             credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
         });
@@ -23,26 +17,25 @@ async function run() {
         await client.connect();
         console.log("✅ Neon Connected!");
 
-        // Table ရှိမရှိ စစ်မယ်၊ မရှိရင် ဆောက်မယ်
+        // Table အသင့်ရှိမရှိ ထပ်စစ်မယ်
         await client.query(`
             CREATE TABLE IF NOT EXISTS neurons (
                 id SERIAL PRIMARY KEY,
-                data JSONB,
+                data JSONB NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
 
-        const snap = await db.collection('neurons').limit(10).get();
-        console.log(`📡 Firestore Docs: ${snap.size}`);
-
-        for (const doc of snap.docs) {
+        const snap = await db.collection('neurons').limit(1).get();
+        if (snap.empty) {
+            console.log("⚠️ No documents in Firestore!");
+        } else {
+            const doc = snap.docs[0];
             await client.query('INSERT INTO neurons (data) VALUES ($1)', [JSON.stringify(doc.data())]);
+            console.log("🏁 SUCCESS: 1 doc synced!");
         }
 
-        console.log("🏁 SUCCESS: Data Synced!");
-        clearTimeout(timeout);
         await client.end();
-        process.exit(0);
     } catch (e) {
         console.error("❌ ERROR:", e.message);
         process.exit(1);
