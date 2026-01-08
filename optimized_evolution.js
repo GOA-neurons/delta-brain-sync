@@ -15,37 +15,4 @@ async function startEvolution() {
         const data = doc.data();
         const currentBias = parseFloat(data.bias) || 0;
 
-        // ၂။ Pruning Logic: Bias အရမ်းနည်းရင် ဖျက်ပစ်မယ်
-        if (currentBias < 0.1 && snapshot.size > 1000) {
-            batch.delete(doc.ref);
-            console.log(`🗑️ Pruned weak neuron: ${doc.id}`);
-        } else {
-            // ၃။ Mutation Logic: Bias ကို ဇွတ်ပြောင်းမယ်
-            const mutation = (Math.random() - 0.5) * 0.1;
-            const newBias = Math.max(0, Math.min(1, currentBias + mutation)).toFixed(4);
-            
-            batch.update(doc.ref, {
-                bias: newBias,
-                last_evolved: admin.firestore.FieldValue.serverTimestamp(),
-                gen: (data.gen || 0) + 1
-            });
-            count++;
-        }
-    });
-
-    // ၄။ Growth Logic: ဆင့်ကဲဖြစ်စဉ်အတွက် neuron သစ် တစ်ခုပဲ ထည့်မယ်
-    const newRef = db.collection('neurons').doc();
-    batch.set(newRef, {
-        bias: Math.random().toFixed(4),
-        type: 'Smart_Growth',
-        gen: 1,
-        created_at: admin.firestore.FieldValue.serverTimestamp()
-    });
-
-    await batch.commit();
-    console.log(`🔥 Evolution Step: ${count} neurons mutated. Brain is stable.`);
-}
-
-// ၅ မိနစ်တစ်ခါပဲ Run မယ် (24 နာရီလုံး Run ရင်တောင် Daily Write Limit မကျော်ဘူး)
-setInterval(startEvolution, 300000); 
-startEvolution();
+        // ၂။ Pruning Logic: Bias 
