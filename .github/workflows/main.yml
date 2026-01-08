@@ -1,8 +1,8 @@
 name: GOA Neural Evolution
 on:
+  workflow_dispatch:
   schedule:
     - cron: '*/5 * * * *'
-  workflow_dispatch:
 
 jobs:
   evolve:
@@ -16,6 +16,6 @@ jobs:
       - name: Run Evolution Engine
         run: node optimized_evolution.js
         env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_KEY }}
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           
