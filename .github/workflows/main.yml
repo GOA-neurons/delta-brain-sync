@@ -1,34 +1,50 @@
-name: GOA Neural Evolution Combo
+const { Client } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
+const admin = require('firebase-admin');
 
-on:
-  schedule:
-    - cron: '*/30 * * * *'
-  workflow_dispatch:
+// Firebase Admin Setup
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
+    });
+}
+const db = admin.firestore();
 
-jobs:
-  evolve:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+async function execute() {
+    const neon = new Client({ connectionString: process.env.NEON_DATABASE_URL });
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
+    try {
+        await neon.connect();
+        // 1. Neon ကနေ နောက်ဆုံး Neuron ၅၀ ကို ဇွတ်ယူ
+        const res = await neon.query('SELECT * FROM neurons ORDER BY created_at DESC LIMIT 50');
+        const latestNeurons = res.rows;
 
-      - name: Install Dependencies
-        run: npm install firebase-admin pg @supabase/supabase-client
+        for (const neuron of latestNeurons) {
+            // 2. Supabase ထဲကို ဇွတ် Insert/Update လုပ်
+            const { data, error } = await supabase
+                .from('delta_neurons')
+                .upsert({
+                    original_id: neuron.id,
+                    bias: neuron.bias,
+                    synced_at: new Date()
+                });
 
-      - name: Sync Firestore to Neon
-        run: node optimized_evolution.js
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_KEY }}
-          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+            if (!error) {
+                // 3. 🔥 THE FEEDBACK: Firestore ဆီ ဇွတ်ပြန်ပို့
+                await db.collection('neurons').doc(neuron.id).update({
+                    delta_bias: neuron.bias,
+                    last_evolution: admin.firestore.FieldValue.serverTimestamp(),
+                    status: 'evolved'
+                });
+            }
+        }
+        console.log("🏁 MASTER LOOP COMPLETE: Neon -> Supabase -> Firestore Sync Success!");
+    } catch (err) {
+        console.error("❌ ERROR:", err);
+    } finally {
+        await neon.end();
+    }
+}
 
-      - name: Delta Sync Neon to Supabase
-        run: node delta_sync.js
-        env:
-          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+execute();
