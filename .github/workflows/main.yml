@@ -1,7 +1,27 @@
-- name: Run Evolve Script
-  env:
-    FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-    NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-  run: |
-    npm install firebase-admin pg
-    node optimized_evolution.js
+name: Neural Evolution Sync
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Manual run လုပ်လို့ရအောင်
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm install firebase-admin pg
+
+      - name: Run Evolution
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: node optimized_evolution.js
