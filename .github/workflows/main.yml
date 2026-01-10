@@ -2,10 +2,10 @@ name: GOA Neural Evolution
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/15 * * * *'  # ၁၅ မိနစ်တစ်ခါ သူ့ဘာသာသူ ဇွတ်ပတ်မောင်းမယ်
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [ main ]      # မင်း code အသစ် push တိုင်းလည်း မောင်းမယ်
+  workflow_dispatch:        # မင်း လက်နဲ့ ဇွတ်နှိပ်ပြီး မောင်းချင်ရင်လည်း ရမယ်
 
 jobs:
   evolve:
@@ -25,6 +25,5 @@ jobs:
 
       - name: Run Evolution Script
         env:
-          NEON_URL: ${{ secrets.NEON_URL }}
+          NEON_URL: ${{ secrets.NEON_URL }}  # Secret ထဲက URL ကို ဒီမှာ လှမ်းယူတာ
         run: python evolve.py
-        
