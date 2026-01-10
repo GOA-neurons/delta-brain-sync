@@ -5,7 +5,7 @@ on:
     - cron: '*/15 * * * *'
   push:
     branches: [ main ]
-workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
   evolve:
@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: ambassadors/setup-python@v4
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
@@ -27,3 +27,4 @@ jobs:
         env:
           NEON_URL: ${{ secrets.NEON_URL }}
         run: python evolve.py
+        
