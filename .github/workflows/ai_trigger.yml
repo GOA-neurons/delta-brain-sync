@@ -1,26 +1,34 @@
 name: Trigger Kaggle AI Brain
+
 on:
   push:
     paths:
-      - '**/evolve.py'
+      - 'evolve.py'  # evolve.py ကို ပြင်တိုင်း ဒီ Action အလိုအလျောက် ပွင့်လာမယ်
+
 jobs:
   trigger_ai:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+
       - name: Install Kaggle
         run: pip install kaggle
+
       - name: Push to Kaggle
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
           mkdir -p ~/.kaggle
+          # Secrets ထဲက Username နဲ့ Key ကို သုံးပြီး kaggle.json ဆောက်မယ်
           echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
+          
+          # kaggle_brain folder ထဲက ကုဒ်တွေကို Kaggle ဆီ ဇွတ်တွန်းပို့မယ်
           kaggle kernels push -p ./kaggle_brain
