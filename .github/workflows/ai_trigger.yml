@@ -3,7 +3,7 @@ name: Trigger Kaggle AI Brain
 on:
   push:
     paths:
-      - '**/evolve.py' # evolve.py ကို push တိုင်း ဒါက နိုးလာမယ်
+      - '**/evolve.py'
 
 jobs:
   trigger_ai:
@@ -22,11 +22,12 @@ jobs:
 
       - name: Push to Kaggle
         env:
-          KAGGLE_USERNAME: "yewintthetlwin"
-          KAGGLE_KEY: "KGAT_8fef17acf4ae459d703ca6e4f51b654e"
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
           mkdir -p ~/.kaggle
           echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
-          # kaggle_brain folder ထဲက ကုဒ်ကို Kaggle ဆီ ဇွတ်တွန်းမယ်
+          # kaggle_brain folder ထဲက ကုဒ်တွေကို Kaggle ဆီ ဇွတ်တွန်းပို့မယ်
           kaggle kernels push -p ./kaggle_brain
+          
