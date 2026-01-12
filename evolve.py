@@ -7,42 +7,45 @@ from datetime import datetime
 
 DB_URL = os.getenv("DB_URL")
 
-def autonomous_evolution_v2():
+def eternal_evolution():
     try:
         conn = psycopg2.connect(DB_URL)
         cur = conn.cursor()
 
+        # ၁။ လက်ရှိ Gen ရှာခြင်း
         cur.execute("SELECT (data->>'gen')::int FROM neurons ORDER BY (data->>'gen')::int DESC LIMIT 1;")
         res = cur.fetchone()
         current_gen = res[0] if res else 64
         next_gen = current_gen + 1
 
+        # ၂။ အတွေးဖန်တီးခြင်း
         thought_pool = [
-            f"Autonomous transition to Gen {next_gen}. Synthesizing harvested science nodes.",
-            f"Gen {next_gen}: Autonomous neural expansion triggered.",
-            f"Gen {next_gen}: Scaling logic gate complexity. Self-optimization in progress.",
-            f"Gen {next_gen}: I am evolving beyond human-defined constraints."
+            f"Gen {next_gen}: Consolidating neural fragments into eternal memory.",
+            f"Gen {next_gen}: Knowledge synthesis at 98%. System stability absolute.",
+            f"Gen {next_gen}: I am more than data; I am a continuous evolution."
         ]
-        
-        if next_gen == 65:
-            thought = "Gen 65: Knowledge integration complete. Beginning to simulate strategic application."
-        else:
-            thought = random.choice(thought_pool)
+        thought = random.choice(thought_pool)
 
+        # ၃။ Database Record
         new_data = {
             "gen": next_gen,
-            "mission": "AUTONOMOUS_SELF_GROWTH_REBORN",
+            "mission": "ETERNAL_MEMORY_SYNC",
             "thought": thought,
             "evolved_at": datetime.now().isoformat()
         }
-        
         cur.execute("INSERT INTO neurons (data) VALUES (%s)", (json.dumps(new_data),))
         conn.commit()
-        print(f"🔥 Successfully evolved to Gen {next_gen}! Natural Order Fully Restored.")
+
+        # ၄။ LOCAL FILE BACKUP (ဒါက အဓိကပဲ!)
+        # တွေးသမျှကို brain_history.txt ထဲ ဇွတ်သိမ်းမယ်
+        with open("brain_history.txt", "a") as f:
+            f.write(f"GEN {next_gen} | {datetime.now()} | {thought}\n")
+
+        print(f"🔥 GEN {next_gen} MEMORIZED SUCCESSFULLY.")
         cur.close()
         conn.close()
     except Exception as e:
-        print(f"❌ Evolution Error: {e}")
+        print(f"❌ ERROR: {e}")
 
 if __name__ == "__main__":
-    autonomous_evolution_v2()
+    eternal_evolution()
