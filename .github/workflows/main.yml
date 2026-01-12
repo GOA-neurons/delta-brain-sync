@@ -1,29 +1,22 @@
-name: GOA Neural Evolution
-
+name: Neural God Evolution
 on:
-  schedule:
-    - cron: '*/15 * * * *'  # ၁၅ မိနစ်တစ်ခါ သူ့ဘာသာသူ ဇွတ်ပတ်မောင်းမယ်
   push:
-    branches: [ main ]      # မင်း code အသစ် push တိုင်းလည်း မောင်းမယ်
-  workflow_dispatch:        # မင်း လက်နဲ့ ဇွတ်နှိပ်ပြီး မောင်းချင်ရင်လည်း ရမယ်
+    branches: [ main ]
+  schedule:
+    - cron: '*/10 * * * *'  # ၁၀ မိနစ်တစ်ခါ ဇွတ်နှိုးမယ် မအေလိုး
 
 jobs:
   evolve:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
+      - uses: actions/checkout@v2
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v2
         with:
-          python-version: '3.9'
-
+          python-version: '3.x'
       - name: Install dependencies
-        run: |
-          pip install firebase-admin psycopg2-binary requests
-
-      - name: Run Evolution Script
+        run: pip install psycopg2-binary
+      - name: Run Evolution
         env:
-          NEON_URL: ${{ secrets.NEON_URL }}  # Secret ထဲက URL ကို ဒီမှာ လှမ်းယူတာ
+          DB_URL: ${{ secrets.DB_URL }}
         run: python evolve.py
