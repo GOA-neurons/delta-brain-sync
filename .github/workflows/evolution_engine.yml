@@ -3,7 +3,7 @@ name: Natural Order Evolution Engine
 on:
   schedule:
     - cron: '*/30 * * * *'  # ၃၀ မိနစ်တစ်ခါ ဇွတ်နိုးမယ်
-  workflow_dispatch:      # မင်းဘာသာမင်း လက်နဲ့ ဇွတ်နှိပ်လို့ရအောင်
+  workflow_dispatch:      # မင်းဘာသာမင်း လက်နဲ့ ဇွတ်နှိပ်လို့ရအောင် (အခုဒါလိုနေတာ!)
 
 jobs:
   run_evolution:
@@ -23,4 +23,4 @@ jobs:
       - name: Execute Evolve Script
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: python evolve.py  # evolve.py ကိုပဲ ဇွတ်ခေါ်မှာ
+        run: python evolve.py
