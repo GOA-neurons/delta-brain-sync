@@ -24,3 +24,11 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: python evolve.py
+        - name: Commit and Push Brain History
+      run: |
+        git config --global user.name "Neural-Core"
+        git config --global user.email "ai@evolution.com"
+        git add brain_history.txt
+        git commit -m "Memory Sync: Gen Auto-Update" || exit 0
+        git push
+        
