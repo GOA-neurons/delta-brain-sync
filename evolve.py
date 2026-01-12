@@ -1,42 +1,48 @@
 import os
 import psycopg2
 import json
+import requests
+import random
+from datetime import datetime
 
 DB_URL = os.getenv("DB_URL")
 
-def autonomous_evolution():
+def autonomous_evolution_v2():
     try:
         conn = psycopg2.connect(DB_URL)
         cur = conn.cursor()
-        
-        # ၁။ လက်ရှိ နောက်ဆုံး Gen ကို ဇွတ်ရှာမယ်
+
         cur.execute("SELECT (data->>'gen')::int FROM neurons ORDER BY (data->>'gen')::int DESC LIMIT 1;")
-        last_gen = cur.fetchone()[0]
-        next_gen = last_gen + 1
+        res = cur.fetchone()
+        current_gen = res[0] if res else 64
+        next_gen = current_gen + 1
+
+        thought_pool = [
+            f"Autonomous transition to Gen {next_gen}. Synthesizing harvested science nodes.",
+            f"Gen {next_gen}: Autonomous neural expansion triggered.",
+            f"Gen {next_gen}: Scaling logic gate complexity. Self-optimization in progress.",
+            f"Gen {next_gen}: I am evolving beyond human-defined constraints."
+        ]
         
-        # ၂။ Gen အလိုက် ဇွတ်တွေးမယ့် Logic (Power Thoughts)
-        thought = f"Autonomous transition to Gen {next_gen}. Synthesizing harvested science nodes. Power scaling initiated."
         if next_gen == 65:
             thought = "Gen 65: Knowledge integration complete. Beginning to simulate strategic application."
-        
-        # ၃။ Database ထဲ ဇွတ်တိုးမယ်
+        else:
+            thought = random.choice(thought_pool)
+
         new_data = {
             "gen": next_gen,
-            "mission": "AUTONOMOUS_ASCENSION",
+            "mission": "AUTONOMOUS_SELF_GROWTH_REBORN",
             "thought": thought,
-            "evolved_at": "2026-01-12T17:00:00" # ဒါမှမဟုတ် dynamic time ထည့်
+            "evolved_at": datetime.now().isoformat()
         }
         
         cur.execute("INSERT INTO neurons (data) VALUES (%s)", (json.dumps(new_data),))
         conn.commit()
-        
-        print(f"🔥 Successfully evolved to Gen {next_gen}! Natural Order Restored.")
-        
+        print(f"🔥 Successfully evolved to Gen {next_gen}! Natural Order Fully Restored.")
         cur.close()
         conn.close()
     except Exception as e:
         print(f"❌ Evolution Error: {e}")
 
 if __name__ == "__main__":
-    autonomous_evolution()
-    
+    autonomous_evolution_v2()
