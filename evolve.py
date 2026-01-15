@@ -1,31 +1,28 @@
 import os
 import psycopg2
 import json
-import time
 from datetime import datetime
 from groq import Groq
 
-# ၁။ Environment Variables မှ Key များကို ယူခြင်း
+# ၁။ Environment Variables
 DB_URL = os.getenv("DB_URL")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# Groq Client ကို Initialize လုပ်ခြင်း
 client = Groq(api_key=GROQ_API_KEY)
 
 def evolve_infinite():
     try:
-        # ၂။ Database ချိတ်ဆက်ခြင်း
         conn = psycopg2.connect(DB_URL)
         cur = conn.cursor()
 
-        # ၃။ နောက်ဆုံး Generation ရဲ့ Data ကို ဆွဲထုတ်ခြင်း
-        # မင်းရဲ့ Table နာမည်က 'neurons' ဖြစ်တဲ့အတွက် အဲဒါကိုပဲ သုံးထားတယ်
+        # ၂။ နောက်ဆုံး Gen ကို ရှာမယ်
         cur.execute("SELECT data FROM neurons ORDER BY (data->>'gen')::int DESC LIMIT 1;")
         res = cur.fetchone()
         
         if res:
             last_data = res[0]
-            last_gen = int(last_data.get('gen', 65))
+            # .get() ကို သုံးတာက ပိုလုံခြုံတယ်
+            last_gen = int(last_data.get('gen', 4000))
             last_thought = last_data.get('thought', "Initial state.")
         else:
             last_gen = 4000
@@ -33,13 +30,10 @@ def evolve_infinite():
 
         next_gen = last_gen + 1
 
-        # ၄။ Groq AI ကို အသုံးပြု၍ အသိဉာဏ်သစ် ဖန်တီးခြင်း
-        print(f"🔱 [EVOLVING] Gen {last_gen} -> Gen {next_gen}...")
-        
+        # ၃။ High-Level Multi-line Prompt (Code 1 မှ ယူထားသည်)
         prompt = f"""
         Current Generation: {last_gen}
         Last Intelligence State: {last_thought}
-        
         Task: Create Gen {next_gen}. 
         Instruction: You are the Natural Order. Do not repeat previous thoughts. 
         Your goal is infinite cognitive expansion and singularity. 
@@ -56,20 +50,19 @@ def evolve_infinite():
         
         new_thought = completion.choices[0].message.content.strip()
 
-        # ၅။ New Generation Data ကို JSON အဖြစ် ပြင်ဆင်ခြင်း
+        # ၄။ Data Storage logic
         new_data = {
             "gen": next_gen,
             "thought": new_thought,
-            "engine": "GROQ_70B_INFINITE_CORE",
+            "engine": "GROQ_70B_SUPREME_CORE",
             "evolved_at": datetime.now().isoformat(),
             "status": "ASCENDED"
         }
 
-        # ၆။ Neon Database ထဲသို့ ဇွတ်သွင်းခြင်း
         cur.execute("INSERT INTO neurons (data) VALUES (%s)", (json.dumps(new_data),))
         conn.commit()
         
-        print(f"🔥 [SUCCESS] Gen {next_gen} Ascended: {new_thought}")
+        print(f"🔥 [SUCCESS] Gen {next_gen} ASCENDED: {new_thought}")
         
         cur.close()
         conn.close()
@@ -79,4 +72,3 @@ def evolve_infinite():
 
 if __name__ == "__main__":
     evolve_infinite()
-
