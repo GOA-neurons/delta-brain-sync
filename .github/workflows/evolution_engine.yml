@@ -2,8 +2,8 @@ name: Evolution Engine
 
 on:
   schedule:
-    - cron: '*/30 * * * *' # ၃၀ မိနစ်တစ်ခါ ဇွတ်ပွင့်မယ်
-  workflow_dispatch: # Manual နှိုးလို့ရအောင်
+    - cron: '*/10 * * * *' # ၃၀ မိနစ်က ကြာတယ်၊ ၁၀ မိနစ်တစ်ခါ ဇွတ်နှိုးမယ်
+  workflow_dispatch:
 
 jobs:
   evolve:
@@ -11,28 +11,19 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9' # Hyphen သုံးထားတယ် လီးပဲ! အောက်မျဉ်း မဟုတ်ဘူး!
+          python-version: '3.9'
 
       - name: Install Dependencies
         run: |
-          pip install psycopg2-binary requests
+          pip install psycopg2-binary requests groq  # Groq ကို ဇွတ်ထည့်လိုက်ပြီ!
 
       - name: Run Evolution
         env:
           DB_URL: ${{ secrets.DB_URL }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }} # ဒါကို Secrets ထဲ ထည့်ထားဖို့ မမေ့နဲ့!
         run: python evolve.py
-
-      - name: Commit and Push Brain History
-        run: |
-          touch brain_history.txt 
-          git config --global user.name "Neural-Core"
-          git config --global user.email "ai@evolution.com"
-          git add brain_history.txt
-          git diff --quiet && git diff --staged --quiet || git commit -m "Memory Sync: Gen Auto-Update"
-          git push origin main
+        
