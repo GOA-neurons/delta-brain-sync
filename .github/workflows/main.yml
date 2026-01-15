@@ -2,8 +2,8 @@ name: Evolution Engine
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
-  workflow_dispatch:
+    - cron: '*/15 * * * *' # ၁၅ မိနစ်တစ်ခါ ပတ်မယ်
+  workflow_dispatch:      # လက်နဲ့ ဇွတ်နှိပ်လို့ရအောင်
 
 jobs:
   evolve:
@@ -19,10 +19,12 @@ jobs:
 
       - name: Install Dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install psycopg2-binary requests groq
 
       - name: Run Engine
         env:
           DB_URL: ${{ secrets.DB_URL }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        run: python evolve.py  # ဒီမှာ ဖိုင်ကို လှမ်းခေါ်ရတာ!
+        run: python evolve.py
+
