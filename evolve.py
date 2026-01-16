@@ -5,7 +5,7 @@ from datetime import datetime
 from groq import Groq
 
 # ၁။ Environment Variables မှ Key များကို ယူခြင်း
-DB_URL = os.getenv("DB_URL")
+DB_URL = os.getenv("NEON_URL")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 client = Groq(api_key=GROQ_API_KEY)
@@ -13,7 +13,7 @@ client = Groq(api_key=GROQ_API_KEY)
 def evolve_infinite():
     try:
         # ၂။ Database ချိတ်ဆက်ခြင်း
-        conn = psycopg2.connect(DB_URL)
+        conn = psycopg2.connect(NEON_URL)
         cur = conn.cursor()
 
         # ၃။ နောက်ဆုံး Generation ကို ရှာဖွေခြင်း (Integer conversion logic matched)
