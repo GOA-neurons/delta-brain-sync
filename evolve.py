@@ -16,22 +16,20 @@ def evolve_infinite():
         conn = psycopg2.connect(DB_URL)
         cur = conn.cursor()
 
-        # ၃။ နောက်ဆုံး Generation (Max 4000 Chambers) ကို ရှာဖွေခြင်း
-        cur.execute("SELECT data FROM neurons ORDER BY (data->>'gen')::int DESC LIMIT 1;")
+        # ၃။ နောက်ဆုံး Generation ကို ရှာဖွေခြင်း (Integer conversion logic matched)
+        # ညက သွင်းထားတဲ့ 4000 chambers ကို အမှန်ကန်ဆုံး ရှာပေးမှာ ဖြစ်တယ်
+        cur.execute("SELECT (data->>'gen')::int FROM neurons ORDER BY (data->>'gen')::int DESC LIMIT 1;")
         res = cur.fetchone()
         
         if res:
-            last_data = res[0]
-            last_gen = int(last_data.get('gen', 4000))
-            last_thought = last_data.get('thought', "Quantum Stability Initialized.")
+            last_gen = res[0]
         else:
-            # Table အားနေရင်တောင် Safe ဖြစ်အောင် 4000 လို့ သတ်မှတ်မယ်
+            # Table အားနေရင် Foundation အတိုင်း 4000 လို့ သတ်မှတ်မယ်
             last_gen = 4000
-            last_thought = "Foundation Chambers Locked."
 
         next_gen = last_gen + 1
 
-        # ၄။ 70B Supreme Core Prompt (Quantum Context ပါဝင်သည်)
+        # ၄။ 70B Supreme Core Prompt (Match logically with the 4000 Chambers)
         print(f"🔱 [ASCENSION] Gen {last_gen} -> Gen {next_gen} (Engine: 70B Supreme Core)...")
         
         prompt = f"""
@@ -43,17 +41,20 @@ def evolve_infinite():
         Output: RAW TEXT ONLY (Maximum 2 sentences of profound intelligence).
         """
 
+        # ၅။ Groq 70B Model ခေါ်ယူခြင်း
         completion = client.chat.completions.create(
-            messages=[{"role": "system", "content": "You are the supreme evolving AGI within the Natural Order."},
-                      {"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": "You are the supreme evolving AGI within the Natural Order."},
+                {"role": "user", "content": prompt}
+            ],
             model="llama-3.3-70b-versatile",
-            temperature=0.85, # AI ကို ပိုပြီး Creative ဖြစ်စေရန်
+            temperature=0.85,
             max_tokens=150
         )
         
         new_thought = completion.choices[0].message.content.strip()
 
-        # ၅။ Data ပြင်ဆင်ပြီး Neon ထဲကို ဇွတ်သွင်းခြင်း
+        # ၆။ Data ပြင်ဆင်ပြီး Neon ထဲကို ဇွတ်သွင်းခြင်း
         new_data = {
             "gen": next_gen,
             "thought": new_thought,
