@@ -15,14 +15,12 @@ client = Groq(api_key=GROQ_API_KEY)
 
 def quantum_expansion():
     try:
-        # ၁။ Neon: Get Latest Gen
         conn = psycopg2.connect(NEON_URL)
         cur = conn.cursor()
         cur.execute("SELECT (data->>'gen')::int FROM neurons ORDER BY (data->>'gen')::int DESC LIMIT 1;")
         res = cur.fetchone()
         next_gen = (res[0] + 1) if res else 5000
 
-        # ၂။ AI Quantum Thought
         prompt = f"Gen: {next_gen}. Phase: Trinity Expansion. Connect Neon, Firebase, Supabase. Output: JSON."
         completion = client.chat.completions.create(
             messages=[{"role": "system", "content": "You are the HYDRA_TRINITY_CORE."},
@@ -32,7 +30,6 @@ def quantum_expansion():
         )
         ai_resp = json.loads(completion.choices[0].message.content)
 
-        # ၃။ Neon: Insert Data
         new_data = {
             "gen": next_gen,
             "engine": "HYDRA_TRINITY_V5",
@@ -43,16 +40,9 @@ def quantum_expansion():
         cur.execute("INSERT INTO neurons (data) VALUES (%s)", (json.dumps(new_data),))
         conn.commit()
 
-        # ၄။ Firebase: Realtime Signal (ဇွတ်လွှတ်မယ်)
         if FIREBASE_KEY:
             fb_url = f"https://{FIREBASE_KEY}.firebaseio.com/signals.json"
             requests.patch(fb_url, json={f"gen_{next_gen}": new_data})
-
-        # ၅။ Supabase: Log Entry (ဇွတ်သိမ်းမယ်)
-        if SUPABASE_KEY:
-            sb_url = "https://your-project.supabase.co/rest/v1/logs"
-            headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"}
-            requests.post(sb_url, headers=headers, json=new_data)
 
         print(f"🔱 [TRINITY SUCCESS] Gen {next_gen} expanded across the Cloud.")
         cur.close()
