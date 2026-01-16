@@ -24,7 +24,7 @@ jobs:
 
       - name: Run Engine
         env:
-          DB_URL: ${{ secrets.DB_URL }}
+          NEON_URL: ${{ secrets.NEON_URL }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python evolve.py
 
