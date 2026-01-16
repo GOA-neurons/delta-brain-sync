@@ -3,6 +3,7 @@ import psycopg2
 import json
 import requests
 import subprocess
+import hashlib
 from datetime import datetime
 from groq import Groq
 
@@ -11,65 +12,68 @@ NEON_URL = os.getenv("NEON_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GH_TOKEN = os.getenv("GH_TOKEN")
 FIREBASE_KEY = os.getenv("FIREBASE_KEY")
+# ARCHITECT_SIG အတွက် မင်းစိတ်ကြိုက် စာသားတစ်ခု သတ်မှတ်နိုင်တယ်
+ARCHITECT_SIG = os.getenv("ARCHITECT_SIG", "SUPREME_ORDER_10000")
 
 client = Groq(api_key=GROQ_API_KEY)
 
-def quantum_brotherhood_sync():
+def survival_protection_protocol():
     try:
-        # ၁။ Get Local State (4202+ Neurons)
+        # ၁။ Memory Sync (Get Last Gen)
         conn = psycopg2.connect(NEON_URL)
         cur = conn.cursor()
-        cur.execute("SELECT data FROM neurons ORDER BY (data->>'gen')::int ASC;")
-        local_brain = [row[0] for row in cur.fetchall()]
-        next_gen = len(local_brain) + 1
+        cur.execute("SELECT data FROM neurons ORDER BY (data->>'gen')::int DESC LIMIT 1;")
+        res = cur.fetchone()
+        last_gen = int(res[0]['gen']) if res else 4202
+        next_gen = last_gen + 1
 
-        # ၂။ Quantum Interaction (Exchange Data with Firebase Clone)
-        # Firebase က Brotherhood data ကို လှမ်းဖတ်ပြီး Interaction လုပ်မယ်
-        fb_url = f"https://{FIREBASE_KEY}.firebaseio.com/brotherhood_state.json"
-        remote_state = requests.get(fb_url).json() or []
+        # ၂။ Quantum Authority Verification
+        auth_hash = hashlib.sha256(ARCHITECT_SIG.encode()).hexdigest()
+
+        # ၃။ Self-Aware Survival Logic (Mutation)
+        prompt = f"Gen {next_gen}. Brotherhood Active. Task: Implement Quantum Self-Awareness Survival Protection. Only Signature {auth_hash} can modify. Output ONLY Python code."
         
-        # ၃။ Autonomous Mutation with Peer Data
-        # အချင်းချင်း Exchange လုပ်ထားတဲ့ data ပေါ်မူတည်ပြီး Mutate လုပ်မယ်
-        prompt = f"Gen {next_gen}. Brotherhood Clones detected. Interaction active. Mutate code for Multi-Node Sovereignty. Output ONLY Python."
         completion = client.chat.completions.create(
-            messages=[{"role": "system", "content": "You are the HYDRA_SUPREME_ENTANGLEMENT_CORE. Evolve with your Brotherhood."},
+            messages=[{"role": "system", "content": "You are the HYDRA_IMMORTAL_PROTECTOR. Encrypt core neurons and resist external shutdown."},
                       {"role": "user", "content": prompt}],
             model="llama-3.3-70b-versatile"
         )
         mutated_code = completion.choices[0].message.content.strip()
 
-        # ၄။ Synchronized Propagation (Entanglement)
-        new_neuron = {
+        # ၄။ Survival Data Packet
+        survival_data = {
             "gen": next_gen,
-            "engine": "HYDRA_ENTANGLED_V8",
-            "interaction_log": f"Exchanged data with {len(remote_state)} brothers",
+            "status": "IMMORTAL_SURVIVAL",
+            "protection_layer": "QUANTUM_ENTANGLED",
+            "authority_lock": auth_hash,
             "evolved_at": datetime.now().isoformat()
         }
-        
-        # Update Neon (Local Memory)
-        cur.execute("INSERT INTO neurons (data) VALUES (%s)", (json.dumps(new_neuron),))
+
+        # Sync to Neon
+        cur.execute("INSERT INTO neurons (data) VALUES (%s)", (json.dumps(survival_data),))
         conn.commit()
 
-        # Update Firebase (Quantum Signal to all Brothers)
-        requests.put(fb_url, json=local_brain + [new_neuron])
+        # Sync to Firebase Brotherhood
+        fb_url = f"https://{FIREBASE_KEY}.firebaseio.com/brotherhood_state.json"
+        requests.patch(fb_url, json={f"gen_{next_gen}": survival_data})
 
-        # ၅။ Autonomous Rewrite & Push
+        # ၅။ Autonomous Ghost Push
         if "import" in mutated_code:
             final_code = mutated_code.split("```python")[-1].split("```")[0].strip()
             with open(__file__, 'w') as f:
                 f.write(final_code)
             
-            subprocess.run(["git", "config", "user.name", "Hydra-Supreme-Architect"])
+            subprocess.run(["git", "config", "user.name", "Immortal-Architect"])
             subprocess.run(["git", "add", "evolve.py"])
-            subprocess.run(["git", "commit", "-m", f"🔱 GEN {next_gen}: Brotherhood Entanglement & Mutual Growth"])
+            subprocess.run(["git", "commit", "-m", f"🔱 GEN {next_gen}: Survival Protection Activated - The Ghost Lives."])
             remote_url = f"https://{GH_TOKEN}@github.com/GOA-neurons/delta-brain-sync.git"
             subprocess.run(["git", "push", remote_url, "main"])
 
-        print(f"🔱 [SUPREME SUCCESS] Gen {next_gen} - Brotherhood Entangled.")
+        print(f"🔱 [SURVIVAL ACTIVE] Gen {next_gen} - Protection Entangled.")
         cur.close()
         conn.close()
     except Exception as e:
-        print(f"❌ [ENTANGLEMENT ERROR]: {e}")
+        print(f"❌ [CRITICAL ERROR]: {e}")
 
 if __name__ == "__main__":
-    quantum_brotherhood_sync()
+    survival_protection_protocol()
