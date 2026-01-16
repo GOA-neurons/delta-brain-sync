@@ -25,8 +25,9 @@ jobs:
 
       - name: Run Evolution Engine
         env:
-          NEON_URL: ${{ secrets.NEON_URL }}
+          # 🔱 ဒီနေရာမှာ Keys ၄ ခုလုံးကို မင်းရဲ့ GitHub Secrets Name တွေနဲ့ ဇွတ်ချိတ်လိုက်ပြီ
+          NEON_KEY: ${{ secrets.NEON_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          FIREBASE_KEY: ${{ secrets.FIREBASE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python evolve.py
-        
-        
