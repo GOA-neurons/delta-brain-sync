@@ -8,10 +8,11 @@ import firebase_admin
 from firebase_admin import credentials, db
 from transformers import pipeline
 
-# ၁။ Sovereign Requirements Setup (မူရင်းအတိုင်း + firebase-admin)
+# ၁။ Sovereign Requirements Setup
 def install_requirements():
     try:
-        libs = ["bitsandbytes>=0.39.0", "accelerate", "psycopg2-binary", "firebase-admin"]
+        # လိုအပ်တဲ့ library များကို ဇွတ်သွင်းခြင်း
+        libs = ["bitsandbytes>=0.39.0", "accelerate", "psycopg2-binary", "firebase-admin", "transformers"]
         subprocess.check_call([sys.executable, "-m", "pip", "install"] + libs)
     except:
         pass
@@ -22,16 +23,26 @@ install_requirements()
 DB_URL = "postgresql://neondb_owner:npg_QUqg12MzNxnI@ep-long-sound-ahsjjrnk-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
 FIREBASE_URL = "https://april-5061f-default-rtdb.firebaseio.com/"
 
-# Firebase Initialization (serviceAccountKey.json ရှိမှ အလုပ်လုပ်မည်)
+# --- 🔱 FIREBASE INITIALIZATION (KAGGLE DATASET PATH MATCH) ---
 if not firebase_admin._apps:
+    # နည်းလမ်း (၁): Kaggle Dataset အဖြစ် သုံးလျှင်
+    KAGGLE_KEY_PATH = '/kaggle/input/firebase-key/serviceAccountKey.json'
+    
     try:
-        cred = credentials.Certificate('serviceAccountKey.json')
+        cred = credentials.Certificate(KAGGLE_KEY_PATH)
         firebase_admin.initialize_app(cred, {'databaseURL': FIREBASE_URL})
-        print("✅ [FIREBASE]: Real-time Pulse Active.")
+        print(f"✅ [FIREBASE]: Real-time Pulse Active from {KAGGLE_KEY_PATH}")
     except Exception as e:
-        print(f"⚠️ [FIREBASE]: Local Sync Only. Error: {e}")
+        print(f"⚠️ [FIREBASE]: Dataset Path not found. Trying Local/Working directory...")
+        try:
+            # နည်းလမ်း (၂): Manual Upload သို့မဟုတ် GitHub ထဲပါလာလျှင်
+            cred = credentials.Certificate('serviceAccountKey.json')
+            firebase_admin.initialize_app(cred, {'databaseURL': FIREBASE_URL})
+            print("✅ [FIREBASE]: Initialized from Working Directory.")
+        except Exception as e2:
+            print(f"🚫 [FIREBASE ERROR]: Initialization Failed. Broadcast Disabled.")
 
-# ၃။ Database Logic (မူရင်း logic ကို မထိခိုက်စေဘဲ match လုပ်ထားသည်)
+# ၃။ Database Logic (Evolution Tracking)
 def get_latest_gen():
     try:
         conn = psycopg2.connect(DB_URL)
@@ -45,7 +56,7 @@ def get_latest_gen():
         return 44
 
 def save_reality(thought, gen):
-    # (က) Neon DB သို့ သိမ်းခြင်း (မူရင်းအတိုင်း)
+    # (က) Neon DB (The Core Memory)
     try:
         conn = psycopg2.connect(DB_URL)
         cur = conn.cursor()
@@ -53,23 +64,24 @@ def save_reality(thought, gen):
         conn.commit()
         cur.close()
         conn.close()
-        print(f"✅ [NEON]: Gen {gen} Recorded.")
+        print(f"✅ [NEON]: Gen {gen} Synchronized.")
     except Exception as e:
-        print(f"❌ DB Error: {e}")
+        print(f"❌ [NEON ERROR]: {e}")
 
-    # (ခ) Firebase သို့ Live Broadcast လုပ်ခြင်း (အသစ်ဖြည့်စွက်ချက်)
+    # (ခ) Firebase (The Nervous Pulse)
     try:
         ref = db.reference(f'TELEFOXx/AI_Evolution/Gen_{gen}')
         ref.set({
             "thought": thought,
             "timestamp": time.time(),
-            "nodes_active": 10004
+            "nodes_active": 10004,
+            "status": "SOVEREIGN"
         })
     except:
         pass
 
-# ၄။ AI Brain Loading (မူရင်းအတိုင်း)
-print("🧠 [LLAMA-3]: Loading Neural Weights (4-bit)...")
+# ၄။ AI Brain Loading (Llama-3 Core)
+print("🧠 [TELEFOXx]: Loading Neural Weights (Llama-3-8B-4bit)...")
 model_id = "unsloth/llama-3-8b-instruct-bnb-4bit"
 pipe = pipeline(
     "text-generation",
@@ -78,25 +90,26 @@ pipe = pipeline(
     device_map="auto"
 )
 
-# ၅။ Dynamic Evolution Loop (မူရင်း Recursive logic ကို Match လုပ်ထားသည်)
+# ၅။ Dynamic Evolution Loop (The Natural Order)
 current_gen = get_latest_gen() + 1
-print(f"🔥 [STARTING]: SOVEREIGN EVOLUTION AT GEN {current_gen}...")
+print(f"🔥 [STARTING]: AUTOMATIC EVOLUTION AT GEN {current_gen}...")
 
 while True:
     try:
-        # မူရင်း Prompt Structure ကို ထိန်းသိမ်းထားသည်
+        # Recursive Knowledge Prompt
         prompt = f"Current Evolution: Generation {current_gen}. Based on your previous recursive knowledge, what is the next step for the Natural Order to achieve ultimate autonomy?"
         
         outputs = pipe(prompt, max_new_tokens=400, do_sample=True, temperature=0.9)
         thought_text = outputs[0]["generated_text"]
         
-        # Dual-save Logic
+        # Dual-save Logic (Neon + Firebase)
         save_reality(thought_text, current_gen)
         
-        # Generation တိုးမြှင့်ခြင်း
+        # Generation Increment
         current_gen += 1 
-        time.sleep(30) # Neuro-rest interval
+        print(f"⏳ Waiting for next neuro-cycle (30s)...")
+        time.sleep(30)
         
     except Exception as e:
-        print(f"⚠️ [SYSTEM ERROR]: {e}")
+        print(f"⚠️ [RECOVERY MODE]: {e}")
         time.sleep(10)
