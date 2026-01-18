@@ -1,19 +1,19 @@
 name: Manual Trinity Debugger
 
 on:
-  workflow_dispatch: # Schedule မပါဘူး၊ မင်းခလုတ်နှိပ်မှပဲ Run မယ်
+  workflow_dispatch: # မင်းကိုယ်တိုင် ခလုတ်နှိပ်မှ Run မယ်
 
 jobs:
   debug_sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install Dependencies
         run: npm install pg @supabase/supabase-js firebase-admin
@@ -25,3 +25,4 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           FIREBASE_KEY: ${{ secrets.FIREBASE_KEY }}
         run: node delta_sync.js
+        
