@@ -2,21 +2,23 @@ const { Client } = require('pg');
 const { createClient } = require('@supabase/supabase-js');
 const admin = require('firebase-admin');
 
-// 🔱 Firebase Auth Check
+// 🔱 1. Firebase Engine (Matching Secret: FIREBASE_KEY)
 if (!admin.apps.length) {
     try {
         const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount)
         });
+        console.log("🔥 Firebase Initialized.");
     } catch (e) {
-        console.error("❌ Firebase Init Failed. Check FIREBASE_KEY format.");
+        console.error("❌ Firebase Secret Error. Check FIREBASE_KEY format.");
+        process.exit(1);
     }
 }
 const db = admin.firestore();
 
-async function execute() {
-    // 🔱 Connection Strings (GitHub Secrets နဲ့ အတိအကျ Match ဖြစ်ရမယ်)
+async function executeTrinity() {
+    // 🔱 2. Database Core (Matching Secrets: NEON_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     const neon = new Client({ 
         connectionString: process.env.NEON_KEY, 
         ssl: { rejectUnauthorized: false } 
@@ -29,20 +31,14 @@ async function execute() {
 
     try {
         await neon.connect();
-        console.log("🔓 Neon Connected. Fetching 50 Random Neural Fragments...");
+        console.log("🔓 Neon Core Unlocked.");
 
-        // 🔥 Patch V11.1: အချိန်မစစ်တော့ဘဲ ရှိတဲ့ထဲက ၅၀ ကို ဇွတ်ယူမယ်
+        // Patch V11.1: Fetching fragments from Neon
         const res = await neon.query('SELECT * FROM neurons LIMIT 50');
-        
-        if (res.rows.length === 0) {
-            console.log("🌑 Neon table is literally empty.");
-            return;
-        }
-
-        console.log(`📦 Found ${res.rows.length} rows. Starting Sync...`);
+        console.log(`📡 Processing ${res.rows.length} fragments.`);
 
         for (const neuron of res.rows) {
-            // ၁။ Supabase ထဲကို Upsert လုပ်မယ် (Screenshot ထဲက Column နာမည်တွေအတိုင်း)
+            // A. Sync to Supabase delta_neurons
             const { error: sbError } = await supabase
                 .from('delta_neurons')
                 .upsert({
@@ -52,31 +48,29 @@ async function execute() {
                 }, { onConflict: 'original_id' });
 
             if (sbError) {
-                console.error(`❌ Supabase Error for ID ${neuron.id}:`, sbError.message);
+                console.error(`❌ Supabase Error ID ${neuron.id}:`, sbError.message);
                 continue;
             }
 
-            // ၂။ Firestore Status Update
+            // B. Sync to Firebase (Realtime Status Update)
             const genId = neuron.data.gen || `raw_${neuron.id}`;
-            const docRef = db.collection('neurons').doc(`gen_${genId}`);
-            
-            await docRef.set({
+            await db.collection('neurons').doc(`gen_${genId}`).set({
                 status: 'evolved',
-                last_evolution: admin.firestore.FieldValue.serverTimestamp(),
                 neon_id: neuron.id,
-                integrity_check: 'V11.1_FORCE_SYNC'
+                integrity: 'AUTONOMOUS_V11.1_SYNC',
+                last_evolution: admin.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
-            
-            console.log(`✅ Neuron ${genId} Locked & Synced.`);
+
+            console.log(`✅ Fragment gen_${genId} Synced Across Trinity.`);
         }
         
-        console.log("🏁 MISSION ACCOMPLISHED: TRINITY SYNC COMPLETE.");
+        console.log("🏁 MISSION ACCOMPLISHED: AUTONOMOUS DATA FLOW SUCCESSFUL.");
     } catch (err) {
-        console.error("❌ CRITICAL ERROR:", err.stack);
+        console.error("❌ CRITICAL FAILURE:", err.stack);
         process.exit(1);
     } finally {
         await neon.end();
     }
 }
 
-execute();
+executeTrinity();
