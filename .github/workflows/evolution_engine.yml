@@ -12,10 +12,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Setup Node.js (For Sync)
+      - name: Setup Node.js (For Sync & Self-Coding)
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20' # Node 20 က Octokit နဲ့ ပိုကိုက်ညီတယ်
 
       - name: Setup Python (For Evolution)
         uses: actions/setup-python@v4
@@ -26,7 +26,8 @@ jobs:
         run: pip install psycopg2-binary requests groq
 
       - name: Install Node.js Dependencies
-        run: npm install pg @supabase/supabase-js firebase-admin
+        # package.json ရှိရင် npm install တစ်ခုတည်းနဲ့ အကုန်အလုပ်လုပ်မယ်
+        run: npm install 
 
       - name: Step 1 - Run Evolution Engine
         env:
@@ -36,10 +37,11 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python evolve.py
 
-      - name: Step 2 - Run Trinity Sync Engine
+      - name: Step 2 - Run Trinity Sync Engine (with Self-Coding)
         env:
           NEON_KEY: ${{ secrets.NEON_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           FIREBASE_KEY: ${{ secrets.FIREBASE_KEY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }} # 🔱 ဒါက Self-Coding အတွက် မရှိမဖြစ်
         run: node delta_sync.js
