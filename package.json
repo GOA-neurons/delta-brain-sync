@@ -1,0 +1,15 @@
+{
+  "name": "delta-brain-sync",
+  "version": "1.0.0",
+  "description": "Autonomous Self-Evolving Brain Sync",
+  "main": "delta_sync.js",
+  "scripts": {
+    "start": "node delta_sync.js"
+  },
+  "dependencies": {
+    "@octokit/rest": "^20.1.1",
+    "@supabase/supabase-js": "^2.39.3",
+    "firebase-admin": "^12.0.0",
+    "pg": "^8.11.3"
+  }
+}
