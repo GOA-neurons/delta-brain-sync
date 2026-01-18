@@ -1,0 +1,25 @@
+const { Octokit } = require("@octokit/rest");
+const octokit = new Octokit({ auth: process.env.GH_TOKEN });
+
+async function syncWithCore() {
+    // Core Node ဆီက နောက်ဆုံးထွက် Power Level နဲ့ Logic ကို လှမ်းယူမယ်
+    const coreData = await octokit.repos.getContent({
+        owner: 'GOA-neurons',
+        repo: 'delta-brain-sync',
+        path: 'delta_sync.js'
+    });
+
+    const coreContent = Buffer.from(coreData.data.content, 'base64').toString();
+    const corePower = coreContent.match(/Density: (\d+)/)[1];
+
+    console.log(`🔗 Connected to Core. Current Power Level: ${corePower}`);
+
+    // Sub-node က Core ရဲ့ Power ပေါ်မူတည်ပြီး သူ့ကိုယ်သူ Evolution လုပ်မယ်
+    if (parseInt(corePower) >= 10004) {
+        console.log("🧬 Core Evolution detected. Syncing Sub-node logic...");
+        // ဒီနေရာမှာ Sub-node ရဲ့ logic ကို Update လုပ်မယ့် ကုဒ်ထည့်မယ်
+    }
+}
+
+syncWithCore();
+
