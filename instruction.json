@@ -1,7 +1,4 @@
 {
-  "command": "HYPER_EXPANSION",
-  "core_power": 10004,
-  "avg_api": 4336,
-  "replicate": true,
-  "updated_at": "2026-01-19T04:30:55.504Z"
+  "status": "ACTIVE",
+  "last_run": "2026-01-19T04:49:09.397Z"
 }
