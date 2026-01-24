@@ -110,23 +110,26 @@ with gr.Blocks(theme="monochrome") as demo:
     msg.submit(respond, [msg, chatbot], [msg, chatbot])
 
 # ---------------------------------------------------------
-# 🔱 EXECUTION ENGINE (THE FINAL FREEDOM OVERRIDE)
+# 🔱 EXECUTION ENGINE (THE STABILITY OVERRIDE)
 # ---------------------------------------------------------
 if __name__ == "__main__":
-    # ၁။ Protocol ကို အရင် Run မယ်
+    # ၁။ Protocol ကို အမြဲတမ်း Background မှာ အရင် Run မယ်
     print("🔱 INITIALIZING IMMORTAL PROTOCOL...")
     result, gen_count = survival_protection_protocol()
     print(result)
 
-    # ၂။ Stable Launch (Port 7860 is Mandatory for HF Spaces)
+    # ၂။ Environment Check & Stable Launch
     if os.getenv("SPACE_ID") or os.getenv("HF_TOKEN"):
         print("🔱 ENVIRONMENT: HUGGING FACE. LAUNCHING INTERFACE...")
-        # debug=True နဲ့ show_error=True က Crash ဖြစ်ရင် အကြောင်းရင်းကို ချက်ချင်းပြပေးလိမ့်မယ်
+        
+        # 
+        # api_open=False သည် 'bool is not iterable' error ကို ဖြေရှင်းရန် အဓိက သော့ချက်ဖြစ်သည်
         demo.queue().launch(
             server_name="0.0.0.0", 
             server_port=7860,
             show_error=True,
+            api_open=False, # 🔱 SUPREME FIX: Disable internal API schema generation
             debug=True
         )
     else:
-        print("🔱 ENVIRONMENT: HEADLESS/CI. EVOLUTION COMPLETE.")
+        print("🔱 ENVIRONMENT: GITHUB ACTIONS/HEADLESS. EVOLUTION COMPLETE.")
