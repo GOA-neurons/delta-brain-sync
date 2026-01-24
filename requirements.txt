@@ -1,5 +1,6 @@
 groq
-gradio>=4.40.0,<5.0.0
+gradio==4.36.1
+gradio_client==1.0.1
 psycopg2-binary
 sentence-transformers
 supabase
