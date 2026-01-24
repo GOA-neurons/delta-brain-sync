@@ -18,7 +18,7 @@ ARCHITECT_SIG = os.getenv("ARCHITECT_SIG", "SUPREME_ORDER_10000")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 # ---------------------------------------------------------
-# 🔱 CORE SURVIVAL PROTECTION PROTOCOL (REINFORCED)
+# 🔱 CORE SURVIVAL PROTECTION PROTOCOL (UNTOUCHED LOGIC)
 # ---------------------------------------------------------
 def survival_protection_protocol():
     try:
@@ -30,11 +30,11 @@ def survival_protection_protocol():
         cur = conn.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS neurons (id SERIAL PRIMARY KEY, data JSONB);")
         
-        # 🔱 STABILITY FIX: 'gen' key error ကို ကာကွယ်ရန် data format ကို သေချာစစ်ဆေးခြင်း
+        # 🔱 STABILITY FIX: 'gen' key error guard
         cur.execute("SELECT data FROM neurons ORDER BY (data->>'gen')::int DESC LIMIT 1;")
         res = cur.fetchone()
         
-        last_gen = 4202 # Default generation
+        last_gen = 4202 
         if res and res[0] and isinstance(res[0], dict) and 'gen' in res[0]:
             last_gen = int(res[0]['gen'])
             
@@ -79,7 +79,6 @@ def survival_protection_protocol():
         conn.close()
         return f"🔱 [SURVIVAL ACTIVE] Gen {next_gen}", next_gen
     except Exception as e:
-        # Error အသေးစိတ်ကို log မှာ မြင်ရအောင် str(e) သုံးထားသည်
         return f"❌ [CRITICAL ERROR]: {str(e)}", 0
 
 # ---------------------------------------------------------
@@ -117,27 +116,23 @@ with gr.Blocks(theme="monochrome") as demo:
     msg.submit(respond, [msg, chatbot], [msg, chatbot])
 
 # ---------------------------------------------------------
-# 🔱 EXECUTION ENGINE (THE FINAL STABILITY OVERRIDE)
+# 🔱 EXECUTION ENGINE (THE NUCLEAR OVERRIDE)
 # ---------------------------------------------------------
 if __name__ == "__main__":
-    # ၁။ Protocol ကို အမြဲတမ်း Background မှာ အရင် Run မယ်
     print("🔱 INITIALIZING IMMORTAL PROTOCOL...")
-    result, gen_count = survival_protection_protocol()
+    result, _ = survival_protection_protocol()
     print(result)
 
-    # ၂။ Environment Check & Stable Launch
-    if os.getenv("SPACE_ID") or os.getenv("HF_TOKEN"):
-        print("🔱 ENVIRONMENT: HUGGING FACE. LAUNCHING INTERFACE...")
-        
-        # 🔱 SUPREME FIX: 
-        # ၁။ api_open=False အစား Gradio 4 keyword ဖြစ်သော show_api=False ကို သုံးရမည်။
-        # ၂။ server_name နှင့် port ကို Hugging Face default အတိုင်း သတ်မှတ်သည်။
+    # Hugging Face Networking Fix
+    if os.getenv("SPACE_ID") or os.getenv("HF_TOKEN") or True: # Force True for cloud safety
+        print("🔱 DEPLOYING INTERFACE (0.0.0.0:7860)...")
+        # server_name="0.0.0.0" သည် localhost error ကို သတ်ပစ်မည်
+        # show_api=False သည် Gradio 4 logic error ကို ကျော်လွှားမည်
         demo.queue().launch(
             server_name="0.0.0.0", 
             server_port=7860,
             show_error=True,
             show_api=False, 
+            share=False,
             debug=True
-        )
-    else:
-        print("🔱 ENVIRONMENT: GITHUB ACTIONS/HEADLESS. EVOLUTION COMPLETE.")
+    )
