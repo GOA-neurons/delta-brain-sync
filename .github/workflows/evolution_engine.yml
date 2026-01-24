@@ -1,9 +1,8 @@
 name: GOA Neural Evolution & Trinity Sync
-
 on:
   schedule:
-    - cron: '*/10 * * * *'
-  workflow_dispatch:
+    - cron: '*/10 * * * *'  # 🔱 ၁၀ မိနစ်တစ်ခါ Neural Evolution လုပ်မည်
+  workflow_dispatch:        # 🔱 Manual Run လို့ရအောင်
 
 jobs:
   evolve_and_sync:
@@ -20,11 +19,12 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10' # 🔱 Stabilized Version
+          python-version: '3.10'
 
       - name: Install Python Dependencies
         run: |
           pip install --upgrade pip
+          # 🔱 UI မပါဘဲ run မှာမို့လို့ လိုအပ်တဲ့ dependencies တွေကိုပဲ အဓိကတင်မယ်
           pip install psycopg2-binary requests groq sentence-transformers gradio python-dotenv
 
       - name: Install Node.js Dependencies
@@ -38,6 +38,7 @@ jobs:
           FIREBASE_KEY: ${{ secrets.FIREBASE_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          HEADLESS_MODE: "true" # 🔱 UI ကို ကျော်ရန် Flag ပေးလိုက်ခြင်း
         run: python app.py
 
       - name: Step 2 - Run Trinity Sync Engine
@@ -48,4 +49,3 @@ jobs:
           FIREBASE_KEY: ${{ secrets.FIREBASE_KEY }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: node delta_sync.js
-        
