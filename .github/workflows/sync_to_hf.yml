@@ -1,7 +1,7 @@
 name: Sync to Hugging Face
 on:
   push:
-    branches: [main]
+    branches: [main] # မင်းရဲ့ Branch က master ဖြစ်နေရင် master လို့ ပြောင်းပေးပါ
 
 jobs:
   deploy:
@@ -12,15 +12,21 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      # ၁။ 🔱 PUSH CODE TO HF (ULTIMATE FORCE-FEED METHOD)
       - name: Push Code to HF
         run: |
+          # Git Identity ကို CI ပတ်ဝန်းကျင်အတွက် သတ်မှတ်မယ်
           git config --global user.email "commander@goa.com"
           git config --global user.name "TELEFOXX"
-          # 🔱 Header Injection Method: URL ထဲမှာ Token မပါလို့ Special Character Error မတက်တော့ဘူး
-          git config --global http."https://huggingface.co/".extraheader "AUTHORIZATION: Bearer ${{ secrets.HF_TOKEN }}"
-          git remote set-url origin https://huggingface.co/spaces/TELEFOXX/GOA
-          git push --force origin main
+          
+          # Git ကို ဘာမေးခွင့်မှ မပေးအောင် Credential Helper ကို ပိတ်မယ်
+          git config --global credential.helper ""
+          
+          # 🔱 ဒါက အဓိက ဂိတ်ဆုံးနည်းလမ်းပဲ - Username နေရာမှာ 'token' လို့ သုံးပြီး Token ကို တိုက်ရိုက်ထိုးထည့်မယ်
+          # Format: https://token:YOUR_TOKEN@huggingface.co/spaces/USER/SPACE
+          git push --force https://token:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/TELEFOXX/GOA main
 
+      # ၂။ 🔱 SYNC SECRETS TO HF (API METHOD)
       - name: Sync Secrets to HF
         run: |
           curl -X POST https://huggingface.co/api/spaces/TELEFOXX/GOA/variables \
