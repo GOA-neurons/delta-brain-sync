@@ -1,10 +1,5 @@
 groq
-gradio==4.36.1
-gradio_client==1.0.1
+gradio>=4.0.0
 psycopg2-binary
-sentence-transformers
-supabase
-firebase-admin
-numpy
-python-dotenv
 requests
+python-dotenv
