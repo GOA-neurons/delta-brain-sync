@@ -15,7 +15,7 @@ jobs:
       - name: Setup Node.js (For Sync & Self-Coding)
         uses: actions/setup-node@v3
         with:
-          node-version: '20' # Node 20 က Octokit နဲ့ ပိုကိုက်ညီတယ်
+          node-version: '20'
 
       - name: Setup Python (For Evolution)
         uses: actions/setup-python@v4
@@ -23,25 +23,29 @@ jobs:
           python-version: '3.9'
 
       - name: Install Python Dependencies
-        run: pip install psycopg2-binary requests groq
+        run: pip install psycopg2-binary requests groq sentence-transformers gradio
 
       - name: Install Node.js Dependencies
-        # package.json ရှိရင် npm install တစ်ခုတည်းနဲ့ အကုန်အလုပ်လုပ်မယ်
         run: npm install 
 
+      # 🔱 STEP 1: RUN EVOLUTION ENGINE (Renamed to app.py)
       - name: Step 1 - Run Evolution Engine
         env:
+          DATABASE_URL: ${{ secrets.NEON_KEY }} # HF နဲ့ ကိုက်အောင် DATABASE_URL လို့လည်း တွဲပေးထားတယ်
           NEON_KEY: ${{ secrets.NEON_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           FIREBASE_KEY: ${{ secrets.FIREBASE_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: python evolve.py
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: python app.py  # 👈 ဤနေရာတွင် evolve.py ကို app.py အဖြစ် ပြောင်းလဲလိုက်ပြီ
 
+      # 🔱 STEP 2: RUN TRINITY SYNC ENGINE
       - name: Step 2 - Run Trinity Sync Engine (with Self-Coding)
         env:
           NEON_KEY: ${{ secrets.NEON_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           FIREBASE_KEY: ${{ secrets.FIREBASE_KEY }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }} # 🔱 ဒါက Self-Coding အတွက် မရှိမဖြစ်
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: node delta_sync.js
+        
