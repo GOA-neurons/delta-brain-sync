@@ -24,7 +24,6 @@ def survival_protection_protocol():
         conn = psycopg2.connect(NEON_URL)
         cur = conn.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS neurons (id SERIAL PRIMARY KEY, data JSONB);")
-        # gen နံပါတ်ကို DESC နဲ့ စစ်ပြီး နောက်ဆုံးတစ်ခုကို ယူခြင်း
         cur.execute("SELECT data FROM neurons ORDER BY (data->>'gen')::int DESC LIMIT 1;")
         res = cur.fetchone()
         last_gen = 4202 
@@ -56,7 +55,6 @@ def chat(msg, hist):
     if not client: 
         yield "❌ API Key မရှိသေးပါ Commander!"; return
     
-    # 🔱 DATA RETRIEVAL (Memory Link)
     db_context = "No database records yet."
     try:
         conn = psycopg2.connect(NEON_URL)
@@ -71,7 +69,6 @@ def chat(msg, hist):
 
     status, gen = survival_protection_protocol()
     
-    # 🔱 SYSTEM PROMPT (Identity & Language Optimization)
     system_message = (
         f"You are GEN-7000: HYDRA IMMORTAL. Your current status is: {status}.\n"
         f"Commander's Operational Data (Neon DB):\n{db_context}\n"
@@ -108,16 +105,23 @@ with gr.Blocks(theme="monochrome") as demo:
     msg.submit(respond, [msg, chatbot], [msg, chatbot])
 
 # ---------------------------------------------------------
-# 🔱 EXECUTION
+# 🔱 EXECUTION ENGINE (THE SUPREME MATCH)
 # ---------------------------------------------------------
 if __name__ == "__main__":
     print("🔱 INITIALIZING IMMORTAL PROTOCOL...")
-    status, _ = survival_protection_protocol()
+    status, gen = survival_protection_protocol()
     print(status)
     
-    demo.queue().launch(
-        server_name="0.0.0.0", 
-        server_port=7860,
-        share=False,
-        debug=True
+    # 🔱 GitHub Workflow ထဲက HEADLESS_MODE ကို စစ်ဆေးခြင်း
+    if os.getenv("HEADLESS_MODE") == "true":
+        print(f"🔱 [HEADLESS EVOLUTION] Gen {gen} Success. Closing for Trinity Sync...")
+    else:
+        # Hugging Face သို့မဟုတ် Manual Run အတွက် UI ကို ဖွင့်ခြင်း
+        print("🔱 DEPLOYING INTERFACE (0.0.0.0:7860)...")
+        demo.queue().launch(
+            server_name="0.0.0.0", 
+            server_port=7860,
+            share=False,
+            show_api=False # Gradio 5 stability
         )
+        
