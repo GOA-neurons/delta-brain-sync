@@ -13,10 +13,8 @@ jobs:
           lfs: true
 
       - name: Push Code to HF
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git push --force https://TELEFOXX:$HF_TOKEN@huggingface.co/spaces/TELEFOXX/GOA main
+          git push --force https://TELEFOXX:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/TELEFOXX/GOA main
 
       - name: Sync Secrets to HF
         run: |
