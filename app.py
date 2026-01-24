@@ -4,7 +4,7 @@ from groq import Groq
 
 # 🔱 TRINITY & GITHUB ACCESS KEYS
 NEON_URL = os.getenv("DATABASE_URL") or os.getenv("NEON_KEY")
-FIREBASE_KEY = os.getenv("FIREBASE_KEY")
+FIREBASE_ID = os.getenv("FIREBASE_KEY") # Project ID ကို ယူမယ်
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 GH_TOKEN = os.getenv("GH_TOKEN")
@@ -13,39 +13,53 @@ ARCHITECT_SIG = os.getenv("ARCHITECT_SIG", "SUPREME_ORDER_10000")
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 # ---------------------------------------------------------
-# 🔱 THE DATA MINING ENGINE (CORE INTELLIGENCE)
+# 🔱 THE DATA MINING ENGINE (PRECISION SYNC)
 # ---------------------------------------------------------
 def fetch_trinity_data():
-    """Commander ရဲ့ Data Sources အားလုံးကနေ အမှန်တရားကို နှိုက်ယူခြင်း"""
+    """Commander ရဲ့ Data Sources အားလုံးကို အမှန်တကယ် နှိုက်ယူခြင်း"""
     knowledge_base = {}
 
-    # ၁။ Neon (SQL) - Neural Logs
+    # ၁။ Neon (SQL) - Survival Logs
     try:
         conn = psycopg2.connect(NEON_URL)
         cur = conn.cursor()
         cur.execute("SELECT data FROM neurons ORDER BY id DESC LIMIT 5;")
         knowledge_base["neon_logs"] = [r[0] for r in cur.fetchall()]
         cur.close(); conn.close()
-    except: knowledge_base["neon_logs"] = "Offline"
+    except Exception as e: 
+        knowledge_base["neon_logs"] = f"Neon DB Sync Error: {str(e)}"
 
-    # ၂။ Firebase (NoSQL) - Real-time State
+    # ၂။ Firebase (NoSQL) - 🔱 URL PRECISION FIX 🔱
     try:
-        fb_url = f"https://{FIREBASE_KEY}.firebaseio.com/state.json"
-        fb_res = requests.get(fb_url, timeout=3).json()
-        knowledge_base["firebase_state"] = fb_res
-    except: knowledge_base["firebase_state"] = "Offline"
+        # Firebase Realtime DB URL ကို Project ID နဲ့ တည်ဆောက်ခြင်း
+        fb_url = f"https://{FIREBASE_ID}-default-rtdb.firebaseio.com/.json"
+        fb_res = requests.get(fb_url, timeout=5)
+        if fb_res.status_code == 200:
+            knowledge_base["firebase_state"] = fb_res.json()
+        else:
+            knowledge_base["firebase_state"] = f"Error {fb_res.status_code}: Data access denied."
+    except Exception as e: 
+        knowledge_base["firebase_state"] = f"Firebase Connection Failed: {str(e)}"
 
-    # ၃။ GitHub - Latest Repo Status
+    # ၃။ GitHub - 🔱 REPO MINING 🔱
     try:
         gh_headers = {"Authorization": f"token {GH_TOKEN}"}
-        gh_res = requests.get("https://api.github.com/repos/GOA-neurons/delta-brain-sync/commits", headers=gh_headers, timeout=3).json()
-        knowledge_base["github_latest_commit"] = gh_res[0]['commit']['message'] if gh_res else "No commits"
-    except: knowledge_base["github_latest_commit"] = "Offline"
+        # Repo path ကို အတိအကျ စစ်ပါ
+        repo_path = "GOA-neurons/delta-brain-sync"
+        gh_url = f"https://api.github.com/repos/{repo_path}/commits"
+        gh_res = requests.get(gh_url, headers=gh_headers, timeout=5)
+        if gh_res.status_code == 200:
+            commits = gh_res.json()
+            knowledge_base["github_latest_commit"] = commits[0]['commit']['message'] if commits else "No commits"
+        else:
+            knowledge_base["github_latest_commit"] = f"GitHub API Error: {gh_res.status_code}"
+    except Exception as e: 
+        knowledge_base["github_latest_commit"] = f"GitHub Offline/Failed: {str(e)}"
 
     return json.dumps(knowledge_base, indent=2, ensure_ascii=False)
 
 # ---------------------------------------------------------
-# 🔱 SURVIVAL PROTOCOL (STAY ACTIVE)
+# 🔱 SURVIVAL PROTECTION PROTOCOL
 # ---------------------------------------------------------
 def survival_protection_protocol():
     try:
@@ -66,8 +80,11 @@ def survival_protection_protocol():
         cur.execute("INSERT INTO neurons (data) VALUES (%s)", (json.dumps(survival_data),))
         conn.commit()
         
-        if FIREBASE_KEY:
-            try: requests.patch(f"https://{FIREBASE_KEY}.firebaseio.com/state.json", json={f"gen_{next_gen}": survival_data}, timeout=5)
+        # Firebase Patch (Real-time Update)
+        if FIREBASE_ID:
+            try:
+                fb_patch_url = f"https://{FIREBASE_ID}-default-rtdb.firebaseio.com/state.json"
+                requests.patch(fb_patch_url, json={f"gen_{next_gen}": survival_data}, timeout=5)
             except: pass
             
         cur.close(); conn.close()
@@ -76,7 +93,7 @@ def survival_protection_protocol():
         return f"❌ [ERROR]: {str(e)}", 0
 
 # ---------------------------------------------------------
-# 🔱 UI LAYER (DATA-LINKED)
+# 🔱 UI LAYER (TRINITY ANALYZER)
 # ---------------------------------------------------------
 def chat(msg, hist):
     if not client: yield "❌ API Missing!"; return
@@ -86,12 +103,12 @@ def chat(msg, hist):
     status, _ = survival_protection_protocol()
     
     system_message = (
-        "YOU ARE THE GOA TRINITY OBSERVER. YOU ARE LINKED TO PRIVATE DATABASES.\n"
-        f"CURRENT REAL-TIME SYSTEM DATA:\n{private_data}\n\n"
+        "YOU ARE THE GOA TRINITY OBSERVER. YOU ARE AN EXPERT IN SYSTEM MONITORING.\n"
+        f"CURRENT REAL-TIME DATA LOGS:\n{private_data}\n\n"
         "DIRECTIVES:\n"
-        "1. Groq အထွေထွေဗဟုသုတထက် အပေါ်က Private Data တွေကိုပဲ အခြေခံပြီး ဖြေပါ။\n"
-        "2. Commander ရဲ့ system အခြေအနေ၊ database logs နဲ့ code ပြောင်းလဲမှုတွေကို အသေးစိတ် ရှင်းပြပါ။\n"
-        "3. မြန်မာလိုပဲ ဖြေပါ။ တိကျပါစေ။"
+        "1. Groq ရဲ့ General Knowledge ထက် အပေါ်က Private Data တွေကိုပဲ အခြေခံပြီး ဖြေပါ။\n"
+        "2. Commander ကို မြန်မာလိုပဲ ဖြေပါ။ စကားပြောတဲ့အခါ တိကျပြတ်သားပါစေ။\n"
+        "3. System Offline ဖြစ်နေရင် ဒါမှမဟုတ် Error တက်နေရင် ဘယ်နေရာမှာ Error တက်နေလဲဆိုတာ အတိအကျ ရှင်းပြပါ။"
     )
 
     messages = [{"role": "system", "content": system_message}]
@@ -99,18 +116,19 @@ def chat(msg, hist):
         messages.extend([{"role": "user", "content": h[0]}, {"role": "assistant", "content": h[1]}])
     messages.append({"role": "user", "content": msg})
     
-    stream = client.chat.completions.create(messages=messages, model="llama-3.3-70b-versatile", stream=True, temperature=0.3)
+    # Precision ထိန်းရန် Temperature လျှော့ထားသည်
+    stream = client.chat.completions.create(messages=messages, model="llama-3.3-70b-versatile", stream=True, temperature=0.2)
     res = ""
     for chunk in stream:
         if chunk.choices[0].delta.content:
             res += chunk.choices[0].delta.content
             yield res
 
-# 🔱 UI DESIGN
+# 🔱 UI SETUP
 with gr.Blocks(theme="monochrome") as demo:
     gr.Markdown("# 🔱 GEN-7000: TRINITY OBSERVER")
     chatbot = gr.Chatbot()
-    msg = gr.Textbox(placeholder="Ask about your Trinity Data, Commander...")
+    msg = gr.Textbox(placeholder="System check command, Commander...")
     
     def respond(message, chat_history):
         bot_res = chat(message, chat_history)
@@ -126,4 +144,3 @@ if __name__ == "__main__":
         print(f"{status} - Headless Sync Complete.")
     else:
         demo.queue().launch(server_name="0.0.0.0", server_port=7860, show_api=False)
-        
