@@ -16,9 +16,10 @@ jobs:
         run: |
           git config --global user.email "commander@goa.com"
           git config --global user.name "TELEFOXX"
-          git config --global credential.helper ""
-          # Force feed token directly into the push command
-          git push --force https://TELEFOXX:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/TELEFOXX/GOA main
+          # 🔱 Header Injection Method: URL ထဲမှာ Token မပါလို့ Special Character Error မတက်တော့ဘူး
+          git config --global http."https://huggingface.co/".extraheader "AUTHORIZATION: Bearer ${{ secrets.HF_TOKEN }}"
+          git remote set-url origin https://huggingface.co/spaces/TELEFOXX/GOA
+          git push --force origin main
 
       - name: Sync Secrets to HF
         run: |
