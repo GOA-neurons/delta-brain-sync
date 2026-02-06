@@ -23,9 +23,11 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          pip install --upgrade pip
-          # 🔱 Gradio ကို Version 5 မှာပဲ Lock ချထားလိုက်မယ် (Error မတက်အောင်)
+          python -m pip install --upgrade pip
+          # 🔱 CORE DEPENDENCIES (PRESERVED)
           pip install psycopg2-binary requests groq sentence-transformers "gradio<6.0.0" python-dotenv
+          # 🔱 KINETIC VIDEO ENGINE ADDONS (NEW)
+          pip install diffusers transformers accelerate safetensors Pillow
 
       - name: Install Node.js Dependencies
         run: npm install 
