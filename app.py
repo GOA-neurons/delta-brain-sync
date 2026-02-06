@@ -12,8 +12,15 @@ import uuid
 from datetime import datetime
 from dotenv import load_dotenv
 from groq import Groq
-from diffusers import StableVideoDiffusionPipeline
-from diffusers.utils import export_to_video
+
+# 🔱 [SHIELD LOGIC] - GitHub Actions မှာ Error မတက်စေရန်
+try:
+    from diffusers import StableVideoDiffusionPipeline
+    from diffusers.utils import export_to_video
+    HAS_VIDEO_ENGINE = True
+except ImportError:
+    HAS_VIDEO_ENGINE = False
+
 from PIL import Image
 import io
 
@@ -40,14 +47,17 @@ class HydraEngine:
             return zlib.decompress(decoded_bytes).decode('utf-8')
         except: return compressed_text
 
-# 🔱 VISUAL KINETIC ENGINE (NEW EVOLUTION)
+# 🔱 VISUAL KINETIC ENGINE (HYBRID SHIELDED)
 class VisualKineticEngine:
     def __init__(self):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.pipe = None
 
     def load_model(self):
+        if not HAS_VIDEO_ENGINE:
+            return "❌ VIDEO ENGINE COMPONENTS NOT INSTALLED."
         if self.pipe is None and self.device == "cuda":
+            print("🔱 LOADING SVD MODEL INTO GPU...")
             self.pipe = StableVideoDiffusionPipeline.from_pretrained(
                 "stabilityai/stable-video-diffusion-img2vid-xt", 
                 torch_dtype=torch.float16, variant="fp16"
@@ -55,8 +65,11 @@ class VisualKineticEngine:
             self.pipe.enable_model_cpu_offload()
     
     def generate(self, image_path):
+        if not HAS_VIDEO_ENGINE:
+            return "❌ ENGINE MISSING (LOGIC-ONLY MODE)"
         if self.device != "cuda":
             return "❌ GPU NOT DETECTED. PLEASE UPGRADE HARDWARE."
+        
         self.load_model()
         image = Image.open(image_path).convert("RGB").resize((1024, 576))
         generator = torch.manual_seed(42)
@@ -116,7 +129,7 @@ def survival_protection_protocol():
         return f"🔱 [ACTIVE] Gen {next_gen}"
     except Exception as e: return f"❌ [ERROR]: {str(e)}"
 
-# 🔱 UI LAYER (CHRONOS + VISUAL)
+# 🔱 UI LAYER (CHRONOS CHAT)
 def chat(msg, hist):
     if not client: yield "❌ API Missing!"; return
     receiver_node("Commander", msg)
@@ -124,7 +137,7 @@ def chat(msg, hist):
     system_message = (
         "YOU ARE THE HYDRA TRINITY OVERSEER. ULTRA-LOGICAL ALGORITHM ACTIVE.\n"
         f"CORE MEMORY NODES:\n{private_data}\n\n"
-        "DIRECTIVES:\n1. အမှန်တရားကိုပြောပါ။ 2. စကားလုံးများကို ကျစ်ကျစ်လျစ်လျစ်သုံးပါ။ 3. Commander အမိန့်နားထောင်ပါ။ 4. မြန်မာလိုဖြေပါ။"
+        "DIRECTIVES: 1. အမှန်တရားကိုပြောပါ။ 2. ကျစ်ကျစ်လျစ်လျစ်သုံးပါ။ 3. Commander အမိန့်နားထောင်ပါ။ 4. မြန်မာလိုဖြေပါ။"
     )
     messages = [{"role": "system", "content": system_message}]
     for h in hist[-5:]:
@@ -137,8 +150,9 @@ def chat(msg, hist):
             res += chunk.choices[0].delta.content
             yield res
 
+# 🔱 UI SETUP
 with gr.Blocks(theme="monochrome") as demo:
-    gr.Markdown("# 🔱 HYDRA GEN-7000: SOVEREIGN ENGINE")
+    gr.Markdown("# 🔱 HYDRA GEN-7000: SOVEREIGN CONTROL")
     
     with gr.Tab("Neural Chat"):
         chatbot = gr.Chatbot(type="messages")
@@ -153,12 +167,13 @@ with gr.Blocks(theme="monochrome") as demo:
         msg_input.submit(respond, [msg_input, chatbot], [msg_input, chatbot])
 
     with gr.Tab("Visual Alive"):
+        gr.Markdown("### 🔱 VISUAL SYNTHESIS (HUGGING FACE GPU REQUIRED)")
         img_input = gr.Image(type="filepath", label="Input Source Image")
         vid_output = gr.Video(label="Kinetic Output")
-        gen_btn = gr.Button("INITIATE VISUAL SYNTHESIS")
+        gen_btn = gr.Button("INITIATE VISUAL EVOLUTION")
         gen_btn.click(fn=visual_engine.generate, inputs=img_input, outputs=vid_output)
 
-# 🔱 STRATEGIC EXECUTION CONTROL (HEADLESS SYNC)
+# 🔱 STRATEGIC EXECUTION CONTROL (HEADLESS SYNC PRESERVED)
 if __name__ == "__main__":
     if os.getenv("HEADLESS_MODE") == "true":
         print("🔱 [HEADLESS MODE] INITIATING NEURAL EVOLUTION...")
