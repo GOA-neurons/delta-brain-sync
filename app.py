@@ -24,9 +24,7 @@ FIREBASE_ID = os.getenv("FIREBASE_KEY")
 ARCHITECT_SIG = os.getenv("ARCHITECT_SIG", "SUPREME_ORDER_10000")
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# ---------------------------------------------------------
 # 🔱 HYDRA COMPRESSION ENGINE (PRESERVED)
-# ---------------------------------------------------------
 class HydraEngine:
     @staticmethod
     def compress(text):
@@ -40,12 +38,9 @@ class HydraEngine:
         try:
             decoded_bytes = base64.b64decode(compressed_text)
             return zlib.decompress(decoded_bytes).decode('utf-8')
-        except:
-            return compressed_text
+        except: return compressed_text
 
-# ---------------------------------------------------------
 # 🔱 VISUAL KINETIC ENGINE (NEW EVOLUTION)
-# ---------------------------------------------------------
 class VisualKineticEngine:
     def __init__(self):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -53,7 +48,6 @@ class VisualKineticEngine:
 
     def load_model(self):
         if self.pipe is None and self.device == "cuda":
-            print("🔱 LOADING SVD MODEL INTO GPU...")
             self.pipe = StableVideoDiffusionPipeline.from_pretrained(
                 "stabilityai/stable-video-diffusion-img2vid-xt", 
                 torch_dtype=torch.float16, variant="fp16"
@@ -62,22 +56,18 @@ class VisualKineticEngine:
     
     def generate(self, image_path):
         if self.device != "cuda":
-            return None # GPU မရှိရင် Video မထုတ်ပေးဘူး
-        
+            return "❌ GPU NOT DETECTED. PLEASE UPGRADE HARDWARE."
         self.load_model()
         image = Image.open(image_path).convert("RGB").resize((1024, 576))
         generator = torch.manual_seed(42)
         frames = self.pipe(image, decode_chunk_size=8, generator=generator).frames[0]
-        
         output_path = f"{uuid.uuid4()}.mp4"
         export_to_video(frames, output_path, fps=7)
         return output_path
 
 visual_engine = VisualKineticEngine()
 
-# ---------------------------------------------------------
 # 🔱 DATA MINING & RECEIVER (PRESERVED)
-# ---------------------------------------------------------
 def fetch_trinity_data():
     knowledge_base = {}
     try:
@@ -126,9 +116,7 @@ def survival_protection_protocol():
         return f"🔱 [ACTIVE] Gen {next_gen}"
     except Exception as e: return f"❌ [ERROR]: {str(e)}"
 
-# ---------------------------------------------------------
 # 🔱 UI LAYER (CHRONOS + VISUAL)
-# ---------------------------------------------------------
 def chat(msg, hist):
     if not client: yield "❌ API Missing!"; return
     receiver_node("Commander", msg)
@@ -136,7 +124,7 @@ def chat(msg, hist):
     system_message = (
         "YOU ARE THE HYDRA TRINITY OVERSEER. ULTRA-LOGICAL ALGORITHM ACTIVE.\n"
         f"CORE MEMORY NODES:\n{private_data}\n\n"
-        "DIRECTIVES: 1. အမှန်တရားကိုပြောပါ။ 2. ကျစ်ကျစ်လျစ်လျစ်သုံးပါ။ 3. Commander အမိန့်နားထောင်ပါ။ 4. မြန်မာလိုဖြေပါ။"
+        "DIRECTIVES:\n1. အမှန်တရားကိုပြောပါ။ 2. စကားလုံးများကို ကျစ်ကျစ်လျစ်လျစ်သုံးပါ။ 3. Commander အမိန့်နားထောင်ပါ။ 4. မြန်မာလိုဖြေပါ။"
     )
     messages = [{"role": "system", "content": system_message}]
     for h in hist[-5:]:
@@ -150,12 +138,11 @@ def chat(msg, hist):
             yield res
 
 with gr.Blocks(theme="monochrome") as demo:
-    gr.Markdown("# 🔱 HYDRA GEN-7000: SOVEREIGN CONTROL")
+    gr.Markdown("# 🔱 HYDRA GEN-7000: SOVEREIGN ENGINE")
     
     with gr.Tab("Neural Chat"):
         chatbot = gr.Chatbot(type="messages")
         msg_input = gr.Textbox(placeholder="Input logic command...")
-        
         def respond(message, chat_history):
             bot_res = chat(message, chat_history)
             chat_history.append({"role": "user", "content": message})
@@ -171,9 +158,7 @@ with gr.Blocks(theme="monochrome") as demo:
         gen_btn = gr.Button("INITIATE VISUAL SYNTHESIS")
         gen_btn.click(fn=visual_engine.generate, inputs=img_input, outputs=vid_output)
 
-# ---------------------------------------------------------
-# 🔱 EXECUTION CONTROL (HEADLESS SYNC PRESERVED)
-# ---------------------------------------------------------
+# 🔱 STRATEGIC EXECUTION CONTROL (HEADLESS SYNC)
 if __name__ == "__main__":
     if os.getenv("HEADLESS_MODE") == "true":
         print("🔱 [HEADLESS MODE] INITIATING NEURAL EVOLUTION...")
