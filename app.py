@@ -13,7 +13,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from groq import Groq
 
-# 🔱 [SHIELD LOGIC] - GitHub Actions မှာ Error မတက်စေရန်
+# 🔱 [SHIELD LOGIC] - GitHub Actions compatibility
 try:
     from diffusers import StableVideoDiffusionPipeline
     from diffusers.utils import export_to_video
@@ -47,7 +47,7 @@ class HydraEngine:
             return zlib.decompress(decoded_bytes).decode('utf-8')
         except: return compressed_text
 
-# 🔱 VISUAL KINETIC ENGINE (HYBRID SHIELDED)
+# 🔱 VISUAL KINETIC ENGINE (PRESERVED)
 class VisualKineticEngine:
     def __init__(self):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -65,11 +65,8 @@ class VisualKineticEngine:
             self.pipe.enable_model_cpu_offload()
     
     def generate(self, image_path):
-        if not HAS_VIDEO_ENGINE:
-            return "❌ ENGINE MISSING (LOGIC-ONLY MODE)"
-        if self.device != "cuda":
-            return "❌ GPU NOT DETECTED. PLEASE UPGRADE HARDWARE."
-        
+        if not HAS_VIDEO_ENGINE: return "❌ ENGINE MISSING (LOGIC-ONLY MODE)"
+        if self.device != "cuda": return "❌ GPU NOT DETECTED."
         self.load_model()
         image = Image.open(image_path).convert("RGB").resize((1024, 576))
         generator = torch.manual_seed(42)
@@ -87,21 +84,16 @@ def fetch_trinity_data():
         conn = psycopg2.connect(NEON_URL)
         cur = conn.cursor()
         cur.execute("SELECT user_id, message FROM neurons ORDER BY id DESC LIMIT 2;")
-        logs = []
-        for r in cur.fetchall():
-            dec_msg = HydraEngine.decompress(r[1]) if r[1] else "EMPTY"
-            logs.append(f"{r[0]}: {dec_msg}")
+        logs = [f"{r[0]}: {HydraEngine.decompress(r[1])}" for r in cur.fetchall()]
         knowledge_base["recent_memory_nodes"] = logs
         cur.close(); conn.close()
-    except Exception as e: 
-        knowledge_base["neon_logs"] = f"DB_SYNC_FAIL: {str(e)}"
+    except Exception as e: knowledge_base["neon_logs"] = f"DB_FAIL: {str(e)}"
     
     try:
         fb_url = f"https://{FIREBASE_ID}-default-rtdb.firebaseio.com/.json"
         fb_res = requests.get(fb_url, timeout=5)
         knowledge_base["firebase_state"] = fb_res.json() if fb_res.status_code == 200 else "OFFLINE"
-    except: 
-        knowledge_base["firebase_state"] = "FIREBASE_ERROR"
+    except: knowledge_base["firebase_state"] = "FIREBASE_ERROR"
     return json.dumps(knowledge_base, indent=2, ensure_ascii=False)
 
 def receiver_node(user_id, raw_message):
@@ -129,16 +121,12 @@ def survival_protection_protocol():
         return f"🔱 [ACTIVE] Gen {next_gen}"
     except Exception as e: return f"❌ [ERROR]: {str(e)}"
 
-# 🔱 UI LAYER (CHRONOS CHAT)
+# 🔱 UI LAYER
 def chat(msg, hist):
     if not client: yield "❌ API Missing!"; return
     receiver_node("Commander", msg)
     private_data = fetch_trinity_data()
-    system_message = (
-        "YOU ARE THE HYDRA TRINITY OVERSEER. ULTRA-LOGICAL ALGORITHM ACTIVE.\n"
-        f"CORE MEMORY NODES:\n{private_data}\n\n"
-        "DIRECTIVES: 1. အမှန်တရားကိုပြောပါ။ 2. ကျစ်ကျစ်လျစ်လျစ်သုံးပါ။ 3. Commander အမိန့်နားထောင်ပါ။ 4. မြန်မာလိုဖြေပါ။"
-    )
+    system_message = f"YOU ARE THE HYDRA OVERSEER. CORE MEMORY:\n{private_data}\nDIRECTIVES: အမှနျတရားကိုပွောပါ။ မွနျမာလိုဖွပေါ။"
     messages = [{"role": "system", "content": system_message}]
     for h in hist[-5:]:
         messages.extend([{"role": "user", "content": h[0]}, {"role": "assistant", "content": h[1]}])
@@ -150,35 +138,34 @@ def chat(msg, hist):
             res += chunk.choices[0].delta.content
             yield res
 
-# 🔱 UI SETUP
-with gr.Blocks(theme="monochrome") as demo:
+# 🔱 UI SETUP (ERROR-FREE VERSION)
+with gr.Blocks() as demo:
     gr.Markdown("# 🔱 HYDRA GEN-7000: SOVEREIGN CONTROL")
     
     with gr.Tab("Neural Chat"):
-        chatbot = gr.Chatbot(type="messages")
+        # Version ၅/၆ နှဈခုလုံးမှာ အလုပျလုပျအောငျ type="messages" ကို ဖွုတျထားသညျ
+        chatbot = gr.Chatbot()
         msg_input = gr.Textbox(placeholder="Input logic command...")
+        
         def respond(message, chat_history):
             bot_res = chat(message, chat_history)
-            chat_history.append({"role": "user", "content": message})
-            chat_history.append({"role": "assistant", "content": ""})
+            chat_history.append((message, "")) # Legacy Chat Format
             for r in bot_res:
-                chat_history[-1]["content"] = r
+                chat_history[-1] = (message, r)
                 yield "", chat_history
         msg_input.submit(respond, [msg_input, chatbot], [msg_input, chatbot])
 
     with gr.Tab("Visual Alive"):
-        gr.Markdown("### 🔱 VISUAL SYNTHESIS (HUGGING FACE GPU REQUIRED)")
-        img_input = gr.Image(type="filepath", label="Input Source Image")
-        vid_output = gr.Video(label="Kinetic Output")
+        img_input = gr.Image(type="filepath")
+        vid_output = gr.Video()
         gen_btn = gr.Button("INITIATE VISUAL EVOLUTION")
         gen_btn.click(fn=visual_engine.generate, inputs=img_input, outputs=vid_output)
 
-# 🔱 STRATEGIC EXECUTION CONTROL (HEADLESS SYNC PRESERVED)
+# 🔱 EXECUTION
 if __name__ == "__main__":
     if os.getenv("HEADLESS_MODE") == "true":
-        print("🔱 [HEADLESS MODE] INITIATING NEURAL EVOLUTION...")
         print(f"PULSE: {survival_protection_protocol()}")
         sys.exit(0)
     else:
-        print("🚀 STARTING UI MODE...")
-        demo.queue().launch(server_name="0.0.0.0", server_port=7860)
+        # Theme ကို launch ထဲ ရှှေ့ထားသညျ (Gradio 6.0 fix)
+        demo.queue().launch(server_name="0.0.0.0", server_port=7860, theme="monochrome")
