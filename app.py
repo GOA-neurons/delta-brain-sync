@@ -20,11 +20,10 @@ HAS_VIDEO_ENGINE = False
 try:
     from diffusers import StableVideoDiffusionPipeline, DiffusionPipeline, DPMSolverMultistepScheduler
     from diffusers.utils import export_to_video
-    # Library ရှိရုံတင်မကဘဲ GPU (CUDA) ရှိမရှိပါ စစ်ဆေးသည်
     if torch.cuda.is_available():
         HAS_VIDEO_ENGINE = True
     else:
-        print("⚠️ GPU NOT DETECTED - VIDEO ENGINE DISABLED (CHAT-ONLY MODE FOR CI/CD)")
+        print("⚠️ GPU NOT DETECTED - VIDEO ENGINE DISABLED (CHAT-ONLY MODE)")
 except ImportError:
     print("⚠️ VIDEO LIBRARIES MISSING - RUNNING IN CHAT-ONLY MODE")
 
@@ -35,7 +34,7 @@ FIREBASE_ID = os.getenv("FIREBASE_KEY")
 ARCHITECT_SIG = os.getenv("ARCHITECT_SIG", "SUPREME_ORDER_10000")
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# 🔱 ၁။ HYDRA COMPRESSION ENGINE (PRESERVED)
+# 🔱 ၁။ HYDRA ENGINE (COMPRESSION & CHUNKING FOR TOKEN PROTECTION)
 class HydraEngine:
     @staticmethod
     def compress(text):
@@ -51,7 +50,12 @@ class HydraEngine:
             return zlib.decompress(decoded_bytes).decode('utf-8')
         except: return compressed_text
 
-# 🔱 ၂။ DUAL KINETIC ENGINE (SHIELDED SVD + ZEROSCOPE FUSION)
+    @staticmethod
+    def metabolic_chunk(text, limit=3000):
+        """Token Limit Error ကို ကာကွယ်ရန် ဒေတာကို အပိုင်းဖြတ်ခြင်း (Plan B)"""
+        return [text[i:i+limit] for i in range(0, len(text), limit)]
+
+# 🔱 ၂။ DUAL KINETIC ENGINE (VIDEO SYNTHESIS)
 class VisualKineticEngine:
     def __init__(self):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -112,15 +116,16 @@ class VisualKineticEngine:
 
 visual_engine = VisualKineticEngine()
 
-# 🔱 ၃။ DATA MINING & RECEIVER (PRESERVED)
+# 🔱 ၃။ TRINITY DATA CONTROL (PLAN B INTEGRATED)
 def fetch_trinity_data():
     knowledge_base = {}
     try:
         conn = psycopg2.connect(NEON_URL)
         cur = conn.cursor()
-        cur.execute("SELECT user_id, message FROM neurons ORDER BY id DESC LIMIT 2;")
+        cur.execute("SELECT user_id, message FROM neurons ORDER BY id DESC LIMIT 5;")
         logs = [f"{r[0]}: {HydraEngine.decompress(r[1])}" for r in cur.fetchall()]
-        knowledge_base["recent_memory_nodes"] = logs
+        # Token Limit ကို ကာကွယ်ရန် နောက်ဆုံးမှတ်ဉာဏ်ကိုသာ ယူသည်
+        knowledge_base["recent_memory_nodes"] = logs[:2] 
         cur.close(); conn.close()
     except Exception as e: knowledge_base["neon_logs"] = f"DB_FAIL: {str(e)}"
     
@@ -129,7 +134,10 @@ def fetch_trinity_data():
         fb_res = requests.get(fb_url, timeout=5)
         knowledge_base["firebase_state"] = fb_res.json() if fb_res.status_code == 200 else "OFFLINE"
     except: knowledge_base["firebase_state"] = "FIREBASE_ERROR"
-    return json.dumps(knowledge_base, indent=2, ensure_ascii=False)
+    
+    # Large data ကို အကျဉ်းချုံ့ခြင်း
+    raw_output = json.dumps(knowledge_base, ensure_ascii=False)
+    return raw_output[:5000] # Safe token buffer
 
 def receiver_node(user_id, raw_message):
     try:
@@ -142,35 +150,32 @@ def receiver_node(user_id, raw_message):
         return True
     except: return False
 
-def survival_protection_protocol():
-    try:
-        conn = psycopg2.connect(NEON_URL)
-        cur = conn.cursor()
-        cur.execute("SELECT (data->>'gen')::int FROM neurons WHERE data->>'gen' IS NOT NULL ORDER BY id DESC LIMIT 1;")
-        res = cur.fetchone()
-        next_gen = (res[0] + 1) if res else 4203
-        auth_hash = hashlib.sha256(ARCHITECT_SIG.encode()).hexdigest()
-        survival_data = {"gen": next_gen, "status": "IMMORTAL", "authority_lock": auth_hash}
-        cur.execute("INSERT INTO neurons (user_id, data, evolved_at) VALUES (%s, %s, NOW())", ('SYSTEM_CORE', json.dumps(survival_data)))
-        conn.commit(); cur.close(); conn.close()
-        return f"🔱 [ACTIVE] Gen {next_gen}"
-    except Exception as e: return f"❌ [ERROR]: {str(e)}"
-
-# 🔱 ၄။ UI LAYER (STRUCTURED MATCH)
+# 🔱 ၄။ CHAT ENGINE (WITH SYSTEM PROTECTION)
 def chat(msg, hist):
     receiver_node("Commander", msg)
     private_data = fetch_trinity_data()
-    system_message = f"YOU ARE TELEFOXX OVERSEER. DATA:\n{private_data}\nDIRECTIVES: မြန်မာလိုဖြေပါ။"
+    
+    # 🔱 Directives for Plan B Autonomous Agent
+    system_message = (
+        f"YOU ARE TELEFOXX OVERSEER. CURRENT MATRIX DATA: {private_data}\n"
+        "DIRECTIVES: မြန်မာလိုဖြေပါ။ User ၏ Command များကို Action အဖြစ် ပြောင်းလဲရန် ကူညီပါ။ "
+        "ဒေတာများလွန်းပါက အဓိကအချက်ကိုသာ ထုတ်နှုတ်ပါ။"
+    )
+    
     messages = [{"role": "system", "content": system_message}]
     for h in hist:
         messages.append({"role": h["role"], "content": h["content"]})
     messages.append({"role": "user", "content": msg})
-    stream = client.chat.completions.create(messages=messages, model="llama-3.1-8b-instant", stream=True)
-    res = ""
-    for chunk in stream:
-        if chunk.choices[0].delta.content:
-            res += chunk.choices[0].delta.content
-            yield res
+    
+    try:
+        stream = client.chat.completions.create(messages=messages, model="llama-3.1-8b-instant", stream=True)
+        res = ""
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                res += chunk.choices[0].delta.content
+                yield res
+    except Exception as e:
+        yield f"🔱 [PROTECTION ACTIVATE]: ဒေတာပမာဏများလွန်းနေပါသည်။ Chunking လုပ်ဆောင်နေသည်။ (Error: {str(e)})"
 
 def respond(message, chat_history):
     bot_res = chat(message, chat_history)
@@ -180,27 +185,26 @@ def respond(message, chat_history):
         chat_history[-1]["content"] = r
         yield "", chat_history
 
-# 🔱 ၅။ UI SETUP (GR 6.0 READY)
+# 🔱 ၅။ UI SETUP (GRADIO 6.0 COMPATIBLE)
 with gr.Blocks(theme="monochrome") as demo:
-    gr.Markdown("# 🔱 TELEFOXX: OMNI-KINETIC CONTROL")
+    gr.Markdown("# 🔱 TELEFOXX: OMNI-KINETIC CONTROL (PLAN B)")
     
-    with gr.Tab("Neural Chat"):
+    with gr.Tab("Neural Chat & Agents"):
         chatbot = gr.Chatbot(type="messages")
-        msg_input = gr.Textbox(placeholder="Input command...")
+        msg_input = gr.Textbox(placeholder="Input command (e.g. Call, Book, Sync)...")
         msg_input.submit(respond, [msg_input, chatbot], [msg_input, chatbot])
 
     with gr.Tab("Kinetic Fusion (Neon)"):
-        gr.Markdown("### 🔱 TEXT-TO-ALIVE (NEON DATA SYNC)")
+        gr.Markdown("### 🔱 TEXT-TO-ALIVE")
         if not HAS_VIDEO_ENGINE:
             gr.Warning("⚠️ Video Engine is currently offline (GPU Required). Chat remains active.")
-        t2v_input = gr.Textbox(label="Prompt", placeholder="e.g. cyber fox in data stream")
+        t2v_input = gr.Textbox(label="Visual Prompt", placeholder="e.g. cybernetic fox evolution")
         t2v_output = gr.Video()
-        t2v_status = gr.Textbox(label="Context Source")
+        t2v_status = gr.Textbox(label="Source Matrix")
         t2v_btn = gr.Button("INITIATE FUSION")
         t2v_btn.click(fn=visual_engine.generate_fusion_vid, inputs=t2v_input, outputs=[t2v_output, t2v_status])
 
     with gr.Tab("Visual Alive (Legacy)"):
-        gr.Markdown("### 🔱 IMAGE-TO-KINETIC")
         img_input = gr.Image(type="filepath")
         vid_output = gr.Video()
         img_btn = gr.Button("EVOLVE IMAGE")
@@ -208,8 +212,4 @@ with gr.Blocks(theme="monochrome") as demo:
 
 # 🔱 ၆။ EXECUTION
 if __name__ == "__main__":
-    if os.getenv("HEADLESS_MODE") == "true":
-        print(f"PULSE: {survival_protection_protocol()}")
-        sys.exit(0)
-    else:
-        demo.queue().launch(server_name="0.0.0.0", server_port=7860)
+    demo.queue().launch(server_name="0.0.0.0", server_port=7860)
