@@ -12,8 +12,6 @@ import uuid
 from datetime import datetime
 from dotenv import load_dotenv
 from groq import Groq
-from PIL import Image
-import io
 
 # 🔱 [SHIELD] - OMNI-ENVIRONMENT
 HAS_VIDEO_ENGINE = False
@@ -27,7 +25,6 @@ except:
 
 load_dotenv()
 NEON_URL = os.getenv("DATABASE_URL")
-FIREBASE_ID = os.getenv("FIREBASE_KEY") 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 class HydraEngine:
@@ -44,7 +41,6 @@ class HydraEngine:
         except: 
             return str(compressed_text)
 
-# 🔱 DATA CONTROL (STRICT RAG)
 def fetch_trinity_data():
     try:
         conn = psycopg2.connect(NEON_URL)
@@ -52,11 +48,9 @@ def fetch_trinity_data():
         cur.execute("SELECT message FROM neurons WHERE user_id != 'SYSTEM_CORE' ORDER BY id DESC LIMIT 2;")
         rows = cur.fetchall()
         cur.close(); conn.close()
-        
         if rows:
-            context_list = [HydraEngine.decompress(r[0]) for r in rows]
-            return " | ".join(context_list)
-        return "No specific data found in Neon DB."
+            return " | ".join([HydraEngine.decompress(r[0]) for r in rows])
+        return "No specific data found."
     except: 
         return "Database Offline."
 
@@ -69,16 +63,10 @@ def receiver_node(user_id, raw_message):
         conn.commit(); cur.close(); conn.close()
     except: pass
 
-# 🔱 CHAT ENGINE (GROUNDED)
 def chat(msg, hist):
     receiver_node("Commander", msg)
     context = fetch_trinity_data()
-    
-    system_message = (
-        f"CONTEXT: {context}\n\n"
-        "INSTRUCTION: Context ထဲမှာပါတာကိုပဲ မြန်မာလို တိုတိုဖြေပါ။ "
-        "မပါရင် 'Data မရှိသေးပါ' ဟု ဖြေပါ။"
-    )
+    system_message = f"CONTEXT: {context}\nInstruction: မြန်မာလို တိုတိုဖြေပါ။"
     
     messages = [{"role": "system", "content": system_message}]
     for h in hist[-5:]:
@@ -90,7 +78,6 @@ def chat(msg, hist):
             messages=messages, 
             model="llama-3.1-8b-instant", 
             temperature=0.3,
-            max_tokens=600,
             stream=True
         )
         res = ""
@@ -109,21 +96,20 @@ def respond(message, chat_history):
         chat_history[-1]["content"] = r
         yield "", chat_history
 
-# 🔱 UI SETUP
-with gr.Blocks() as demo:
+# 🔱 UI SETUP - THEME MOVED BACK TO CONSTRUCTOR
+with gr.Blocks(theme="monochrome") as demo:
     gr.Markdown("# 🔱 TELEFOXX: CONTROL MATRIX")
     with gr.Tab("Neural Chat"):
         chatbot = gr.Chatbot(type="messages")
         msg_input = gr.Textbox(placeholder="အမိန့်ပေးပါ Commander...")
         msg_input.submit(respond, [msg_input, chatbot], [msg_input, chatbot])
 
-# 🔱 EXECUTION (SYNTAX FIXED)
+# 🔱 EXECUTION - CLEAN LAUNCH
 if __name__ == "__main__":
     try:
         demo.queue().launch(
             server_name="0.0.0.0", 
-            server_port=7860, 
-            theme="monochrome"
+            server_port=7860
         )
     except Exception as e:
         print(f"🔱 [CRITICAL FAILURE]: {str(e)}")
