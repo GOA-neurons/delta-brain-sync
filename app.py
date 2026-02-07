@@ -15,152 +15,62 @@ from groq import Groq
 from PIL import Image
 import io
 
-# 🔱 [SUPREME SHIELD LOGIC] - OMNI-ENVIRONMENT COMPATIBILITY
+# 🔱 [SHIELD] - OMNI-ENVIRONMENT
 HAS_VIDEO_ENGINE = False
 try:
     from diffusers import StableVideoDiffusionPipeline, DiffusionPipeline, DPMSolverMultistepScheduler
     from diffusers.utils import export_to_video
     if torch.cuda.is_available():
         HAS_VIDEO_ENGINE = True
-    else:
-        print("⚠️ GPU NOT DETECTED - VIDEO ENGINE DISABLED (CHAT-ONLY MODE)")
-except ImportError:
-    print("⚠️ VIDEO LIBRARIES MISSING - RUNNING IN CHAT-ONLY MODE")
+except:
+    pass
 
-# 🔱 ENVIRONMENT & KEYS
 load_dotenv()
-NEON_URL = os.getenv("DATABASE_URL") or os.getenv("NEON_KEY")
+NEON_URL = os.getenv("DATABASE_URL")
 FIREBASE_ID = os.getenv("FIREBASE_KEY") 
-ARCHITECT_SIG = os.getenv("ARCHITECT_SIG", "SUPREME_ORDER_10000")
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# 🔱 ၁။ HYDRA ENGINE (COMPRESSION & CHUNKING FOR TOKEN PROTECTION)
 class HydraEngine:
     @staticmethod
     def compress(text):
         if not text: return ""
-        clean_text = " ".join(text.split())
-        compressed_bytes = zlib.compress(clean_text.encode('utf-8'))
+        compressed_bytes = zlib.compress(text.encode('utf-8'))
         return base64.b64encode(compressed_bytes).decode('utf-8')
 
     @staticmethod
     def decompress(compressed_text):
         try:
-            decoded_bytes = base64.b64decode(compressed_text)
-            return zlib.decompress(decoded_bytes).decode('utf-8')
-        except: return compressed_text
+            return zlib.decompress(base64.b64decode(compressed_text)).decode('utf-8')
+        except: return str(compressed_text)
 
-    @staticmethod
-    def metabolic_chunk(text, limit=3000):
-        """Token Limit Error ကို ကာကွယ်ရန် ဒေတာကို အပိုင်းဖြတ်ခြင်း (Plan B)"""
-        return [text[i:i+limit] for i in range(0, len(text), limit)]
-
-# 🔱 ၂။ DUAL KINETIC ENGINE (VIDEO SYNTHESIS)
-class VisualKineticEngine:
-    def __init__(self):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.svd_pipe = None
-        self.fusion_pipe = None
-
-    def load_svd(self):
-        if not HAS_VIDEO_ENGINE: return
-        if self.svd_pipe is None and self.device == "cuda":
-            print("🔱 LOADING SVD ENGINE...")
-            self.svd_pipe = StableVideoDiffusionPipeline.from_pretrained(
-                "stabilityai/stable-video-diffusion-img2vid-xt", 
-                torch_dtype=torch.float16, variant="fp16"
-            )
-            self.svd_pipe.enable_model_cpu_offload()
-
-    def load_fusion(self):
-        if not HAS_VIDEO_ENGINE: return
-        if self.fusion_pipe is None and self.device == "cuda":
-            print("🔱 LOADING ZEROSCOPE FUSION ENGINE...")
-            self.fusion_pipe = DiffusionPipeline.from_pretrained(
-                "cerspense/zeroscope_v2_576w", torch_dtype=torch.float16
-            )
-            self.fusion_pipe.scheduler = DPMSolverMultistepScheduler.from_config(self.fusion_pipe.scheduler.config)
-            self.fusion_pipe.enable_model_cpu_offload()
-    
-    def generate_image_to_vid(self, image_path):
-        if not HAS_VIDEO_ENGINE: return "❌ GPU/ENGINE NOT AVAILABLE"
-        self.load_svd()
-        image = Image.open(image_path).convert("RGB").resize((1024, 576))
-        generator = torch.manual_seed(42)
-        frames = self.svd_pipe(image, decode_chunk_size=8, generator=generator).frames[0]
-        output_path = f"{uuid.uuid4()}.mp4"
-        export_to_video(frames, output_path, fps=7)
-        return output_path
-
-    def generate_fusion_vid(self, user_prompt):
-        if not HAS_VIDEO_ENGINE: return None, "❌ GPU/ENGINE NOT AVAILABLE"
-        self.load_fusion()
-        
-        neon_context = "cybernetic evolution"
-        try:
-            conn = psycopg2.connect(NEON_URL)
-            cur = conn.cursor()
-            cur.execute("SELECT data->>'integrated_knowledge' FROM neurons WHERE data->>'integrated_knowledge' IS NOT NULL ORDER BY id DESC LIMIT 1;")
-            res = cur.fetchone()
-            if res: neon_context = res[0]
-            cur.close(); conn.close()
-        except: pass
-
-        final_prompt = f"{user_prompt}, {neon_context}, high quality, cinematic"
-        with torch.autocast("cuda"):
-            frames = self.fusion_pipe(final_prompt, num_inference_steps=25, height=320, width=576, num_frames=24).frames[0]
-        
-        output_path = f"{uuid.uuid4()}.mp4"
-        export_to_video(frames, output_path, fps=8)
-        return output_path, f"🔱 Syncing with: {neon_context[:40]}..."
-
-visual_engine = VisualKineticEngine()
-
-# 🔱 ၃။ TRINITY DATA CONTROL (PLAN B INTEGRATED)
+# 🔱 DATA CONTROL (မော်ဒယ်မကြောင်အောင် ဒေတာပမာဏကို ဖြတ်တောက်မည်)
 def fetch_trinity_data():
-    knowledge_base = {}
     try:
         conn = psycopg2.connect(NEON_URL)
         cur = conn.cursor()
-        cur.execute("SELECT user_id, message FROM neurons ORDER BY id DESC LIMIT 5;")
-        logs = [f"{r[0]}: {HydraEngine.decompress(r[1])}" for r in cur.fetchall()]
-        # Token Limit ကို ကာကွယ်ရန် နောက်ဆုံးမှတ်ဉာဏ်ကိုသာ ယူသည်
-        knowledge_base["recent_memory_nodes"] = logs[:2] 
+        cur.execute("SELECT message FROM neurons ORDER BY id DESC LIMIT 1;")
+        res = cur.fetchone()
         cur.close(); conn.close()
-    except Exception as e: knowledge_base["neon_logs"] = f"DB_FAIL: {str(e)}"
-    
-    try:
-        fb_url = f"https://{FIREBASE_ID}-default-rtdb.firebaseio.com/.json"
-        fb_res = requests.get(fb_url, timeout=5)
-        knowledge_base["firebase_state"] = fb_res.json() if fb_res.status_code == 200 else "OFFLINE"
-    except: knowledge_base["firebase_state"] = "FIREBASE_ERROR"
-    
-    # Large data ကို အကျဉ်းချုံ့ခြင်း
-    raw_output = json.dumps(knowledge_base, ensure_ascii=False)
-    return raw_output[:5000] # Safe token buffer
+        # ဒေတာအများကြီးမပါအောင် ဇကာချခြင်း
+        return HydraEngine.decompress(res[0])[:300] if res else "No context."
+    except: return "Offline."
 
 def receiver_node(user_id, raw_message):
     try:
         compressed_msg = HydraEngine.compress(raw_message)
         conn = psycopg2.connect(NEON_URL)
         cur = conn.cursor()
-        meta_data = json.dumps({"logic": "ULTRA_LOGICAL", "timestamp": datetime.now().isoformat()})
-        cur.execute("INSERT INTO neurons (user_id, message, data, evolved_at) VALUES (%s, %s, %s, NOW())", (user_id, compressed_msg, meta_data))
+        cur.execute("INSERT INTO neurons (user_id, message, evolved_at) VALUES (%s, %s, NOW())", (user_id, compressed_msg))
         conn.commit(); cur.close(); conn.close()
-        return True
-    except: return False
+    except: pass
 
-# 🔱 ၄။ CHAT ENGINE (WITH SYSTEM PROTECTION)
+# 🔱 CHAT ENGINE (TEMPERATURE & LOGIC FIX)
 def chat(msg, hist):
     receiver_node("Commander", msg)
-    private_data = fetch_trinity_data()
+    context = fetch_trinity_data()
     
-    # 🔱 Directives for Plan B Autonomous Agent
-    system_message = (
-        f"YOU ARE TELEFOXX OVERSEER. CURRENT MATRIX DATA: {private_data}\n"
-        "DIRECTIVES: မြန်မာလိုဖြေပါ။ User ၏ Command များကို Action အဖြစ် ပြောင်းလဲရန် ကူညီပါ။ "
-        "ဒေတာများလွန်းပါက အဓိကအချက်ကိုသာ ထုတ်နှုတ်ပါ။"
-    )
+    # စနစ်အား ရှင်းလင်းပြတ်သားသော ညွှန်ကြားချက်ပေးခြင်း
+    system_message = f"Role: TelefoxX Overseer. Knowledge: {context}. Reply in Burmese only. Be concise."
     
     messages = [{"role": "system", "content": system_message}]
     for h in hist:
@@ -168,48 +78,37 @@ def chat(msg, hist):
     messages.append({"role": "user", "content": msg})
     
     try:
-        stream = client.chat.completions.create(messages=messages, model="llama-3.1-8b-instant", stream=True)
+        # temperature=0.4 သည် ပေါက်ကရစာများ မထွက်အောင် ထိန်းချုပ်ပေးသည်
+        stream = client.chat.completions.create(
+            messages=messages, 
+            model="llama-3.1-8b-instant", 
+            temperature=0.4,
+            max_tokens=800,
+            stream=True
+        )
         res = ""
         for chunk in stream:
             if chunk.choices[0].delta.content:
                 res += chunk.choices[0].delta.content
                 yield res
     except Exception as e:
-        yield f"🔱 [PROTECTION ACTIVATE]: ဒေတာပမာဏများလွန်းနေပါသည်။ Chunking လုပ်ဆောင်နေသည်။ (Error: {str(e)})"
+        yield f"⚠️ System Rebooting... (Error: {str(e)})"
 
 def respond(message, chat_history):
-    bot_res = chat(message, chat_history)
     chat_history.append({"role": "user", "content": message})
     chat_history.append({"role": "assistant", "content": ""})
+    bot_res = chat(message, chat_history[:-1])
     for r in bot_res:
         chat_history[-1]["content"] = r
         yield "", chat_history
 
-# 🔱 ၅။ UI SETUP (GRADIO 6.0 COMPATIBLE)
+# 🔱 UI SETUP
 with gr.Blocks(theme="monochrome") as demo:
-    gr.Markdown("# 🔱 TELEFOXX: OMNI-KINETIC CONTROL (PLAN B)")
-    
-    with gr.Tab("Neural Chat & Agents"):
+    gr.Markdown("# 🔱 TELEFOXX: OMNI-CONTROL V6")
+    with gr.Tab("Neural Chat"):
         chatbot = gr.Chatbot(type="messages")
-        msg_input = gr.Textbox(placeholder="Input command (e.g. Call, Book, Sync)...")
+        msg_input = gr.Textbox(placeholder="အမိန့်ပေးပါ Commander...")
         msg_input.submit(respond, [msg_input, chatbot], [msg_input, chatbot])
 
-    with gr.Tab("Kinetic Fusion (Neon)"):
-        gr.Markdown("### 🔱 TEXT-TO-ALIVE")
-        if not HAS_VIDEO_ENGINE:
-            gr.Warning("⚠️ Video Engine is currently offline (GPU Required). Chat remains active.")
-        t2v_input = gr.Textbox(label="Visual Prompt", placeholder="e.g. cybernetic fox evolution")
-        t2v_output = gr.Video()
-        t2v_status = gr.Textbox(label="Source Matrix")
-        t2v_btn = gr.Button("INITIATE FUSION")
-        t2v_btn.click(fn=visual_engine.generate_fusion_vid, inputs=t2v_input, outputs=[t2v_output, t2v_status])
-
-    with gr.Tab("Visual Alive (Legacy)"):
-        img_input = gr.Image(type="filepath")
-        vid_output = gr.Video()
-        img_btn = gr.Button("EVOLVE IMAGE")
-        img_btn.click(fn=visual_engine.generate_image_to_vid, inputs=img_input, outputs=vid_output)
-
-# 🔱 ၆။ EXECUTION
 if __name__ == "__main__":
     demo.queue().launch(server_name="0.0.0.0", server_port=7860)
