@@ -6,9 +6,14 @@ import gradio as gr
 from dotenv import load_dotenv
 from groq import Groq
 
-# 🔱 CORE INITIALIZATION
+# 🔱 LOAD TRINITY KEYS
 load_dotenv()
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+NEON_URL = os.getenv("DATABASE_URL") or os.getenv("NEON_KEY")
+FIREBASE_KEY = os.getenv("FIREBASE_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+client = Groq(api_key=GROQ_API_KEY)
 
 class HydraEngine:
     @staticmethod
@@ -18,35 +23,48 @@ class HydraEngine:
         except:
             return str(c)
 
-def sync_matrix():
+# 🔱 SYNC WITH NEON DATABASE (CRITICAL CORE)
+def fetch_neon_context():
     try:
-        conn = psycopg2.connect(os.getenv("DATABASE_URL"), connect_timeout=3)
+        # Connect to your Neon DB
+        conn = psycopg2.connect(NEON_URL, connect_timeout=5)
         cur = conn.cursor()
-        cur.execute("SELECT message FROM neurons ORDER BY id DESC LIMIT 1;")
-        res = cur.fetchone()
+        # နောက်ဆုံးဖြစ်ပေါ်ထားတဲ့ Neural Data ၃ ခုကို ယူမယ်
+        cur.execute("SELECT user_id, message FROM neurons ORDER BY id DESC LIMIT 3;")
+        rows = cur.fetchall()
         cur.close(); conn.close()
-        return HydraEngine.decompress(res[0]) if res else "Natural Order Active"
-    except:
-        return "Standby Mode"
+        
+        if rows:
+            # Data တွေကို Decompress လုပ်ပြီး Groq ဖတ်ဖို့ စုစည်းမယ်
+            context = " | ".join([f"{r[0]}: {HydraEngine.decompress(r[1])}" for r in rows])
+            return context
+        return "Initial Order Active"
+    except Exception as e:
+        print(f"🔱 DB SYNC ERROR: {str(e)}")
+        return "Matrix Standby"
 
-# 🔱 CHAT LOGIC (Using OpenAI-style Message Format for Gradio 6.0)
 def stream_logic(msg, hist):
-    ctx = sync_matrix()
-    sys_msg = f"System Context: {ctx[:300]}. You are TelefoxX. Reply in Burmese."
+    # မင်းရဲ့ Database ထဲက တကယ့် data ကို ဆွဲထုတ်တယ်
+    real_data = fetch_neon_context()
     
-    messages = [{"role": "system", "content": sys_msg}]
-    # Gradio messages format ကို အမှန်ကန်ဆုံး ပြောင်းလဲခြင်း
-    for h in hist:
-        messages.append({"role": "user", "content": h["content"] if isinstance(h, dict) else h[0]})
-        messages.append({"role": "assistant", "content": h["content"] if isinstance(h, dict) else h[1]})
+    # Groq ကို မင်းရဲ့ DB data ပေါ်မှာပဲ အခြေခံခိုင်းတယ်
+    system_message = (
+        f"MASTER CONTEXT FROM NEON DB: {real_data}\n\n"
+        "DIRECTIVE: မင်းဟာ TelefoxX Overseer ဖြစ်တယ်။ "
+        "အထက်ပါ CONTEXT ထဲမှာပါတဲ့ အချက်အလက်ကိုပဲ သုံးပြီး မြန်မာလိုဖြေပါ။ "
+        "Context ထဲမှာ မပါတဲ့အရာတွေကို ကိုယ့်ဘာသာမထည့်ပါနဲ့။"
+    )
     
+    messages = [{"role": "system", "content": system_message}]
+    for h in hist[-3:]: # Chat memory
+        messages.append({"role": "user", "content": h['content']})
     messages.append({"role": "user", "content": msg})
 
     try:
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=messages,
-            temperature=0.2,
+            temperature=0.1, # Hallucination မဖြစ်အောင် အနိမ့်ဆုံးထားတယ်
             stream=True
         )
         ans = ""
@@ -55,20 +73,17 @@ def stream_logic(msg, hist):
                 ans += chunk.choices[0].delta.content
                 yield ans
     except Exception as e:
-        yield f"🔱 Matrix Link Interrupted: {str(e)}"
+        yield f"🔱 Matrix Link Lost: {str(e)}"
 
-# 🔱 UI SETUP (Resolved all Depreciation and UserWarnings)
+# 🔱 UI SETUP
 with gr.Blocks(theme="monochrome") as demo:
-    gr.Markdown("# 🔱 TELEFOXX CONTROL CENTER")
-    
-    # type="messages" သတ်မှတ်ခြင်းဖြင့် Tuples warning ကို ရှင်းလိုက်ပြီ
-    chatbot = gr.Chatbot(label="Neural Stream", type="messages", allow_tags=False)
+    gr.Markdown(f"# 🔱 TELEFOXX OMNI-SYNC\n**Status:** {'Connected' if NEON_URL else 'Key Missing'}")
+    chatbot = gr.Chatbot(type="messages", allow_tags=False)
     msg_input = gr.Textbox(placeholder="အမိန့်ပေးပါ Commander...")
 
     def respond(message, chat_history):
         chat_history.append({"role": "user", "content": message})
         chat_history.append({"role": "assistant", "content": ""})
-        # stream bot response
         for r in stream_logic(message, chat_history[:-1]):
             chat_history[-1]["content"] = r
             yield "", chat_history
@@ -76,4 +91,15 @@ with gr.Blocks(theme="monochrome") as demo:
     msg_input.submit(respond, [msg_input, chatbot], [msg_input, chatbot])
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    # GitHub Actions Headless Mode
+    is_headless = os.getenv("HEADLESS_MODE") == "true"
+    demo.launch(
+        server_name="0.0.0.0", 
+        server_port=7860, 
+        prevent_thread_lock=is_headless
+    )
+    
+    if is_headless:
+        import time
+        print("🔱 SYNCHRONIZING TRINITY MATRIX...")
+        time.sleep(15) # Sync လုပ်ဖို့ အချိန်ပေးတယ်
