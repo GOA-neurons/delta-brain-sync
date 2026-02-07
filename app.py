@@ -40,20 +40,27 @@ class HydraEngine:
     @staticmethod
     def decompress(compressed_text):
         try:
+            # Base64 decode ပြီး zlib decompress လုပ်သည်
             return zlib.decompress(base64.b64decode(compressed_text)).decode('utf-8')
-        except: return str(compressed_text)
+        except: 
+            return str(compressed_text)
 
-# 🔱 DATA CONTROL (မော်ဒယ်မကြောင်အောင် ဒေတာပမာဏကို ဖြတ်တောက်မည်)
+# 🔱 DATA CONTROL (STRICT RAG LOGIC)
 def fetch_trinity_data():
     try:
         conn = psycopg2.connect(NEON_URL)
         cur = conn.cursor()
-        cur.execute("SELECT message FROM neurons ORDER BY id DESC LIMIT 1;")
-        res = cur.fetchone()
+        # နောက်ဆုံး Knowledge ၂ ခုကို ယူပြီး Context အဖြစ်သုံးမည်
+        cur.execute("SELECT message FROM neurons WHERE user_id != 'SYSTEM_CORE' ORDER BY id DESC LIMIT 2;")
+        rows = cur.fetchall()
         cur.close(); conn.close()
-        # ဒေတာအများကြီးမပါအောင် ဇကာချခြင်း
-        return HydraEngine.decompress(res[0])[:300] if res else "No context."
-    except: return "Offline."
+        
+        if rows:
+            context_list = [HydraEngine.decompress(r[0]) for r in rows]
+            return " | ".join(context_list)
+        return "No specific data found in Neon DB."
+    except Exception as e: 
+        return f"Database Error: {str(e)}"
 
 def receiver_node(user_id, raw_message):
     try:
@@ -64,26 +71,34 @@ def receiver_node(user_id, raw_message):
         conn.commit(); cur.close(); conn.close()
     except: pass
 
-# 🔱 CHAT ENGINE (TEMPERATURE & LOGIC FIX)
+# 🔱 CHAT ENGINE (GROUNDED ON DATA)
 def chat(msg, hist):
     receiver_node("Commander", msg)
     context = fetch_trinity_data()
     
-    # စနစ်အား ရှင်းလင်းပြတ်သားသော ညွှန်ကြားချက်ပေးခြင်း
-    system_message = f"Role: TelefoxX Overseer. Knowledge: {context}. Reply in Burmese only. Be concise."
+    # 🔱 STRICT INSTRUCTION: Groq ၏ Roleplay ကို ပိတ်ပြီး Data ကိုသာ အခြေခံခိုင်းခြင်း
+    system_message = (
+        f"CONTEXT DATA FROM NEON DB: {context}\n\n"
+        "INSTRUCTION:\n"
+        "၁။ မင်းဟာ TelefoxX Overseer ဖြစ်တယ်။\n"
+        "၂။ အထက်ဖော်ပြပါ 'CONTEXT DATA' ထဲမှာ ပါတဲ့ အချက်အလက်ကိုပဲ အခြေခံပြီး ဖြေပါ။\n"
+        "၃။ Context ထဲမှာ မပါတဲ့အကြောင်းအရာဆိုရင် 'ကျွန်ုပ်၏ Data matrix ထဲတွင် ဤအချက်အလက် မရှိသေးပါ' ဟု ဖြေပါ။\n"
+        "၄။ စကားလုံးများကို ထပ်တလဲလဲ ရွတ်ဆိုခြင်း မပြုပါနဲ့။\n"
+        "၅။ မြန်မာလို တိုတိုနှင့် လိုရင်းကိုသာ ဖြေပါ။"
+    )
     
     messages = [{"role": "system", "content": system_message}]
-    for h in hist:
+    # Context window ကို ထိန်းသိမ်းရန် နောက်ဆုံး chat history ၅ ခုသာ ယူမည်
+    for h in hist[-5:]:
         messages.append({"role": h["role"], "content": h["content"]})
     messages.append({"role": "user", "content": msg})
     
     try:
-        # temperature=0.4 သည် ပေါက်ကရစာများ မထွက်အောင် ထိန်းချုပ်ပေးသည်
         stream = client.chat.completions.create(
             messages=messages, 
             model="llama-3.1-8b-instant", 
-            temperature=0.4,
-            max_tokens=800,
+            temperature=0.3, # ပိုမို တည်ငြိမ်စေရန် 0.3 သို့ လျှော့ချထားသည်
+            max_tokens=600,
             stream=True
         )
         res = ""
@@ -92,11 +107,12 @@ def chat(msg, hist):
                 res += chunk.choices[0].delta.content
                 yield res
     except Exception as e:
-        yield f"⚠️ System Rebooting... (Error: {str(e)})"
+        yield f"⚠️ Matrix Error: {str(e)}"
 
 def respond(message, chat_history):
     chat_history.append({"role": "user", "content": message})
     chat_history.append({"role": "assistant", "content": ""})
+    # bot_res သို့ နောက်ဆုံး chat_history (assistant row မပါဘဲ) ပို့သည်
     bot_res = chat(message, chat_history[:-1])
     for r in bot_res:
         chat_history[-1]["content"] = r
@@ -104,10 +120,10 @@ def respond(message, chat_history):
 
 # 🔱 UI SETUP
 with gr.Blocks(theme="monochrome") as demo:
-    gr.Markdown("# 🔱 TELEFOXX: OMNI-CONTROL V6")
+    gr.Markdown("# 🔱 TELEFOXX: DATA-DRIVEN MATRIX")
     with gr.Tab("Neural Chat"):
         chatbot = gr.Chatbot(type="messages")
-        msg_input = gr.Textbox(placeholder="အမိန့်ပေးပါ Commander...")
+        msg_input = gr.Textbox(placeholder="အမိန့်ပေးပါ Commander... (Data အပေါ်မှာပဲ အခြေခံပါလိမ့်မယ်)")
         msg_input.submit(respond, [msg_input, chatbot], [msg_input, chatbot])
 
 if __name__ == "__main__":
