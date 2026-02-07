@@ -6,15 +6,17 @@ import gradio as gr
 from dotenv import load_dotenv
 from groq import Groq
 
-# 🔱 LOAD CORE ONLY
+# 🔱 CORE INITIALIZATION
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 class HydraEngine:
     @staticmethod
     def decompress(c):
-        try: return zlib.decompress(base64.b64decode(c)).decode('utf-8')
-        except: return str(c)
+        try:
+            return zlib.decompress(base64.b64decode(c)).decode('utf-8')
+        except:
+            return str(c)
 
 def sync_matrix():
     try:
@@ -23,24 +25,27 @@ def sync_matrix():
         cur.execute("SELECT message FROM neurons ORDER BY id DESC LIMIT 1;")
         res = cur.fetchone()
         cur.close(); conn.close()
-        return HydraEngine.decompress(res[0]) if res else "Order Initialized"
-    except: return "Standby Mode"
+        return HydraEngine.decompress(res[0]) if res else "Natural Order Active"
+    except:
+        return "Standby Mode"
 
+# 🔱 CHAT LOGIC (Using OpenAI-style Message Format for Gradio 6.0)
 def stream_logic(msg, hist):
     ctx = sync_matrix()
-    # 🔱 THE BOX BYPASS: Logic ကို System Message ထဲ တိုတိုပဲ ထည့်မယ်
-    sys_msg = f"Data: {ctx[:200]}. Role: TelefoxX. Reply Burmese."
+    sys_msg = f"System Context: {ctx[:300]}. You are TelefoxX. Reply in Burmese."
     
-    msgs = [{"role": "system", "content": sys_msg}]
-    for h in hist[-2:]:
-        msgs.append({"role": "user", "content": h[0]})
-        msgs.append({"role": "assistant", "content": h[1]})
-    msgs.append({"role": "user", "content": msg})
+    messages = [{"role": "system", "content": sys_msg}]
+    # Gradio messages format ကို အမှန်ကန်ဆုံး ပြောင်းလဲခြင်း
+    for h in hist:
+        messages.append({"role": "user", "content": h["content"] if isinstance(h, dict) else h[0]})
+        messages.append({"role": "assistant", "content": h["content"] if isinstance(h, dict) else h[1]})
+    
+    messages.append({"role": "user", "content": msg})
 
     try:
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
-            messages=msgs,
+            messages=messages,
             temperature=0.2,
             stream=True
         )
@@ -50,23 +55,25 @@ def stream_logic(msg, hist):
                 ans += chunk.choices[0].delta.content
                 yield ans
     except Exception as e:
-        yield f"🔱 Offline: {str(e)}"
+        yield f"🔱 Matrix Link Interrupted: {str(e)}"
 
-# 🔱 UI: FASTEST RENDERING
-with gr.Blocks() as demo:
-    gr.Markdown("# 🔱 TELEFOXX CORE")
-    chat = gr.Chatbot(label="Neural Stream")
-    input = gr.Textbox(placeholder="Command here...")
+# 🔱 UI SETUP (Resolved all Depreciation and UserWarnings)
+with gr.Blocks(theme="monochrome") as demo:
+    gr.Markdown("# 🔱 TELEFOXX CONTROL CENTER")
     
-    def process(m, h):
-        return "", h + [[m, ""]]
-    
-    def bot(h):
-        for res in stream_logic(h[-1][0], h[:-1]):
-            h[-1][1] = res
-            yield h
+    # type="messages" သတ်မှတ်ခြင်းဖြင့် Tuples warning ကို ရှင်းလိုက်ပြီ
+    chatbot = gr.Chatbot(label="Neural Stream", type="messages", allow_tags=False)
+    msg_input = gr.Textbox(placeholder="အမိန့်ပေးပါ Commander...")
 
-    input.submit(process, [input, chat], [input, chat]).then(bot, chat, chat)
+    def respond(message, chat_history):
+        chat_history.append({"role": "user", "content": message})
+        chat_history.append({"role": "assistant", "content": ""})
+        # stream bot response
+        for r in stream_logic(message, chat_history[:-1]):
+            chat_history[-1]["content"] = r
+            yield "", chat_history
+
+    msg_input.submit(respond, [msg_input, chatbot], [msg_input, chatbot])
 
 if __name__ == "__main__":
     demo.launch(server_name="0.0.0.0", server_port=7860)
