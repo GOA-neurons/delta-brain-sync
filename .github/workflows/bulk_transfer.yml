@@ -1,0 +1,43 @@
+name: Bulk Node Transfer
+on:
+  workflow_dispatch: # Manual Run လုပ်ဖို့အတွက်
+
+jobs:
+  transfer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Supreme Transfer Execution
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN }} # PAT Token ကို Org Secret ထဲမှာ အရင်ထည့်ထားရပါမယ်
+          script: |
+            const TARGET_ORG = "GOA-neurons";
+            const USERNAME = context.repo.owner;
+
+            const repos = await github.paginate(github.rest.repos.listForAuthenticatedUser, {
+              visibility: 'public',
+              per_page: 100
+            });
+
+            // "swarm-node-" နဲ့စပြီး Org ထဲ မရောက်သေးတဲ့ repo တွေကိုပဲ ရွေးမယ်
+            const swarmNodes = repos.filter(repo => 
+              repo.name.startsWith('swarm-node-') && 
+              repo.owner.login !== TARGET_ORG
+            );
+
+            console.log(`📡 Found ${swarmNodes.length} nodes to transfer...`);
+
+            for (const repo of swarmNodes) {
+              try {
+                console.log(`🚀 Transferring ${repo.name} to ${TARGET_ORG}...`);
+                await github.rest.repos.transfer({
+                  owner: repo.owner.login,
+                  repo: repo.name,
+                  new_owner: TARGET_ORG,
+                });
+                console.log(`✅ Success: ${repo.name}`);
+                await new Promise(r => setTimeout(r, 1000)); // Rate limit protection
+              } catch (err) {
+                console.log(`❌ Failed ${repo.name}: ${err.message}`);
+              }
+            }
