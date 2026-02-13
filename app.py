@@ -21,6 +21,7 @@ client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 engine = create_engine(NEON_URL)
 
 class HydraEngine:
+    """Neural Compression for Data Efficiency"""
     @staticmethod
     def compress(data):
         if not data: return ""
@@ -30,23 +31,28 @@ class HydraEngine:
         try: return zlib.decompress(base64.b64decode(c)).decode('utf-8')
         except: return str(c)
 
-# 🔱 ၂။ THE PUMP: UNIVERSAL FORCE INGESTION
+# 🔱 ၂။ THE PUMP: UNIVERSAL FORCE INGESTION (VIEW & TABLE KILLER)
 def universal_hyper_ingest(limit=50):
     try:
         print("🛠️ [FORCE MODE] Scrubbing Existing Schema...")
-        # 🔱 View ရော Table ရောကို တစ်ခုချင်းစီ try-except နဲ့ သတ်မယ်
+        # Connection Context သုံးပြီး Atomic ဖြစ်အောင်လုပ်မယ်
         with engine.connect() as conn:
             with conn.begin():
+                # ၁။ View ရှိလျှင်ဖျက်မည် (Error တက်လျှင် ကျော်သွားမည်)
                 try:
                     conn.execute(text("DROP VIEW IF EXISTS genesis_pipeline CASCADE;"))
+                    print("✅ View cleared (if existed).")
                 except Exception as e:
                     print(f"Skipping View Drop: {e}")
                 
+                # ၂။ Table ရှိလျှင်ဖျက်မည် (Error တက်လျှင် ကျော်သွားမည်)
                 try:
                     conn.execute(text("DROP TABLE IF EXISTS genesis_pipeline CASCADE;"))
+                    print("✅ Table cleared (if existed).")
                 except Exception as e:
                     print(f"Skipping Table Drop: {e}")
                 
+                # ၃။ Table အသစ်ပြန်ဆောက်မည်
                 print("🏗️ Rebuilding Genesis Core Table...")
                 conn.execute(text("""
                     CREATE TABLE genesis_pipeline (
@@ -60,6 +66,7 @@ def universal_hyper_ingest(limit=50):
                 """))
         
         print("📡 Fetching Stable Intelligence (ML-ArXiv)...")
+        # Colab တွင် အောင်မြင်ခဲ့သော Source ကို အသုံးပြုသည်
         ds = load_dataset("CShorten/ML-ArXiv-Papers", split='train', streaming=True)
         records = []
         for i, entry in enumerate(ds):
@@ -84,11 +91,10 @@ def universal_hyper_ingest(limit=50):
     except Exception as e:
         return f"❌ Pipeline Crash: {str(e)}"
 
-# 🔱 ၃။ DIRECT SYNC WITH README FIX
+# 🔱 ၃။ DIRECT SYNC WITH HF API
 def sync_to_huggingface():
     if not HF_TOKEN: return
     try:
-        # README.md Metadata error ကို ဖြေရှင်းဖို့ Sync မလုပ်ခင် ယာယီပြင်မယ်
         api = HfApi()
         api.upload_folder(
             folder_path=".",
@@ -119,6 +125,7 @@ def stream_logic(msg, hist):
         if h[1]: messages.append({"role": "assistant", "content": h[1]})
     messages.append({"role": "user", "content": msg})
     
+    # Brain ကို အမြင့်ဆုံး Llama-3.3 သို့ သတ်မှတ်ထားသည်
     completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages, stream=True)
     ans = ""
     for chunk in completion:
@@ -126,9 +133,9 @@ def stream_logic(msg, hist):
             ans += chunk.choices[0].delta.content
             yield ans
 
-# 🔱 ၅။ UI SETUP
-with gr.Blocks(theme="monochrome") as demo:
-    gr.Markdown("# 🔱 TELEFOXX OMNI-SYNC CORE")
+# 🔱 ၅။ UI SETUP (GRADIO MONOCHROME)
+with gr.Blocks(theme="monochrome", title="TELEFOXX OMNI-SYNC") as demo:
+    gr.Markdown("# 🔱 TELEFOXX OMNI-SYNC CORE\n**Status:** Operational")
     chatbot = gr.Chatbot()
     msg_input = gr.Textbox(placeholder="အမိန့်ပေးပါ Commander...")
     def user(m, h): return "", h + [[m, None]]
@@ -139,9 +146,10 @@ with gr.Blocks(theme="monochrome") as demo:
     msg_input.submit(user, [msg_input, chatbot], [msg_input, chatbot], queue=False).then(bot, chatbot, chatbot)
     gr.Button("🚀 Trigger Expansion").click(universal_hyper_ingest, [], gr.Textbox())
 
-# 🔱 ၆။ EXECUTION
+# 🔱 ၆။ EXECUTION CONTROL (CI/CD READY)
 if __name__ == "__main__":
     if os.getenv("HEADLESS_MODE") == "true":
+        print("🔱 TRIGGERING AUTOMATED PUMP...")
         print(universal_hyper_ingest(limit=50))
         sync_to_huggingface()
         sys.exit(0)
