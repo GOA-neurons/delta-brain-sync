@@ -1,11 +1,14 @@
-# --- CORE CONNECTIVITY ---
-groq
+# --- CRITICAL FIX: GRADIO COMPATIBILITY ---
+huggingface_hub==0.24.0
 gradio==4.44.1
+
+# --- CORE CONNECTIVITY ---
 psycopg2-binary
 sqlalchemy
 python-dotenv
 python-multipart
 requests
+groq
 
 # --- DATA FUSION & PIPELINE ---
 datasets
