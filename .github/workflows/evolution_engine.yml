@@ -19,22 +19,20 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11' # 🔱 Datasets & SQLAlchemy အတွက် 3.11 က ပိုကောင်းပါတယ်
+          python-version: '3.11'
 
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
-          # 🔱 CORE & SCIENCE EXPANSION (NEWLY ADDED)
           pip install datasets pandas sqlalchemy psycopg2-binary requests groq sentence-transformers "gradio<6.0.0" python-dotenv
-          # 🔱 KINETIC VIDEO ENGINE ADDONS (PRESERVED)
           pip install diffusers transformers accelerate safetensors Pillow
 
       - name: Install Node.js Dependencies
         run: npm install 
 
       - name: Step 1 - Run Evolution Engine
+        timeout-minutes: 5 # 🔱 အချိန်အကြာကြီး Hang မနေအောင် ကာကွယ်ခြင်း
         env:
-          # 🔱 DATABASE_URL ကို အဓိက သုံးထားလို့ NEON_KEY နဲ့ Map လုပ်ပေးထားတယ်
           DATABASE_URL: ${{ secrets.NEON_KEY }}
           NEON_KEY: ${{ secrets.NEON_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
