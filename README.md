@@ -1,7 +1,7 @@
 ---
 title: GOA OMNI SYNC
 emoji: 🔱
-colorFrom: black
+colorFrom: indigo
 colorTo: blue
 sdk: gradio
 sdk_version: 4.44.1
