@@ -133,7 +133,7 @@ async function executeAutonomousTrinity() {
 
     try {
         await neon.connect();
-        const res = await neon.query("SELECT * FROM neurons LIMIT 50");
+        const res = await neon.query("SELECT * FROM neurons ORDER BY id DESC");
         for (const neuron of res.rows) {
             await supabase.from('neurons').upsert({ id: neuron.id, data: neuron.data, synced_at: new Date().toISOString() });
             await db.collection('neurons').doc(`node_${neuron.id}`).set({ status: 'trinity_synced', last_evolution: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
