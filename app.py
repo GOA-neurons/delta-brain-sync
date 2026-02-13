@@ -10,7 +10,7 @@ from datasets import load_dataset
 from sqlalchemy import create_engine
 from huggingface_hub import HfApi
 
-# 🔱 CORE INITIALIZATION
+# 🔱 ၁။ CORE INITIALIZATION
 load_dotenv()
 NEON_URL = os.getenv("NEON_KEY") or os.getenv("DATABASE_URL")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -20,6 +20,7 @@ client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 engine = create_engine(NEON_URL) if NEON_URL else None
 
 class HydraEngine:
+    """မူလအတိုင်း Neural Data ကို Encode/Decode လုပ်သည့် အင်ဂျင်"""
     @staticmethod
     def compress(data):
         if not data: return ""
@@ -29,11 +30,13 @@ class HydraEngine:
         try: return zlib.decompress(base64.b64decode(c)).decode('utf-8')
         except: return str(c)
 
-# 🔱 DATABASE INGESTION
+# 🔱 ၂။ DATA PIPELINE (SCIENCE & TECH DATA PUMP)
 def universal_hyper_ingest(limit=50):
-    if not engine: return "❌ Database Connection Missing"
+    """Hugging Face မှ သိပ္ပံဒေတာများကို Neon ထဲသို့ Neural Compression ဖြင့် သွင်းခြင်း"""
+    if not engine: return "❌ Database Offline"
     try:
-        print("🚀 Fetching ArXiv Data...")
+        print("📡 Accessing ArXiv Repository (Parquet Format)...")
+        # Parquet Mode ဖြင့် ဒေတာအမှန်တကယ် ဆွဲယူခြင်း
         ds = load_dataset("arxiv_dataset", "full", split='train', streaming=True)
         records = []
         for i, entry in enumerate(ds):
@@ -45,20 +48,21 @@ def universal_hyper_ingest(limit=50):
                 'energy_stability': -500.0,
                 'master_sequence': entry.get('categories')
             })
-        if records:
-            pd.DataFrame(records).to_sql('genesis_pipeline', engine, if_exists='append', index=False)
-            return f"✅ Ingested {len(records)} Records."
-        return "⚠️ No records found."
-    except Exception as e:
-        return f"❌ Pipeline Error: {str(e)}"
+            print(f"📥 Buffer: {entry.get('title')[:40]}...")
 
-# 🔱 HUGGING FACE DIRECT UPLOAD (GIT-FREE)
+        if records:
+            # Atomic Write to Database
+            pd.DataFrame(records).to_sql('genesis_pipeline', engine, if_exists='append', index=False)
+            return f"✅ SUCCESS: {len(records)} Neural Records Synced to Neon."
+        return "⚠️ Sync Failed: No Data Fetched."
+    except Exception as e:
+        return f"❌ Pipeline Crash: {str(e)}"
+
+# 🔱 ၃။ DIRECT API SYNC (NO GIT ERROR)
 def sync_to_huggingface():
-    if not HF_TOKEN:
-        print("⚠️ HF_TOKEN Missing. Skipping Sync.")
-        return
+    """Git Push မလိုဘဲ API ဖြင့် ဖိုင်များကို Hugging Face Space သို့ တိုက်ရိုက်တင်ခြင်း"""
+    if not HF_TOKEN: return
     try:
-        print("📡 Direct Syncing to Hugging Face via API...")
         api = HfApi()
         api.upload_folder(
             folder_path=".",
@@ -67,26 +71,34 @@ def sync_to_huggingface():
             token=HF_TOKEN,
             ignore_patterns=[".git*", "__pycache__*"]
         )
-        print("✅ Hugging Face Space Updated Successfully!")
+        print("🔱 Space Sync Complete: Code & UI Updated.")
     except Exception as e:
-        print(f"❌ HF Sync Failed: {e}")
+        print(f"❌ Sync Failed: {e}")
 
-# 🔱 CHAT LOGIC & UI (မပြောင်းလဲပါ)
+# 🔱 ၄။ OMNI-OVERSEER CHAT LOGIC
 def fetch_neon_context():
+    """Database မှ နောက်ဆုံးရ သိပ္ပံဒေတာများကို Context အဖြစ် ယူခြင်း"""
     try:
         conn = psycopg2.connect(NEON_URL, connect_timeout=5)
         cur = conn.cursor()
-        cur.execute("(SELECT user_id, message FROM neurons ORDER BY id DESC LIMIT 3) UNION ALL (SELECT science_domain, detail FROM genesis_pipeline ORDER BY id DESC LIMIT 3)")
+        cur.execute("""
+            (SELECT user_id, message FROM neurons ORDER BY id DESC LIMIT 3)
+            UNION ALL
+            (SELECT science_domain, detail FROM genesis_pipeline ORDER BY id DESC LIMIT 3)
+        """)
         rows = cur.fetchall()
         cur.close(); conn.close()
-        return " | ".join([f"[{r[0]}]: {HydraEngine.decompress(r[1])}" for r in rows]) if rows else "Directive Active"
-    except: return "Sync Standby"
+        return " | ".join([f"[{r[0]}]: {HydraEngine.decompress(r[1])}" for r in rows])
+    except: return "Standby Mode"
 
 def stream_logic(msg, hist):
     context = fetch_neon_context()
-    messages = [{"role": "system", "content": f"CONTEXT: {context}\nမင်းက TelefoxX Overseer ဖြစ်တယ်။ မြန်မာလိုဖြေပါ။"}]
-    for h in hist: messages.extend([{"role": "user", "content": h[0]}, {"role": "assistant", "content": h[1]}])
+    messages = [{"role": "system", "content": f"CONTEXT: {context}\nမင်းက TelefoxX Overseer ဖြစ်တယ်။ မြန်မာလို ဖြေဆိုပါ။"}]
+    for h in hist: 
+        if h[0]: messages.append({"role": "user", "content": h[0]})
+        if h[1]: messages.append({"role": "assistant", "content": h[1]})
     messages.append({"role": "user", "content": msg})
+    
     completion = client.chat.completions.create(model="llama-3.1-8b-instant", messages=messages, stream=True)
     ans = ""
     for chunk in completion:
@@ -94,21 +106,29 @@ def stream_logic(msg, hist):
             ans += chunk.choices[0].delta.content
             yield ans
 
-with gr.Blocks() as demo:
-    gr.Markdown("# 🔱 TELEFOXX OMNI-SYNC CORE")
-    chatbot = gr.Chatbot()
-    msg_input = gr.Textbox(placeholder="အမိန့်ပေးပါ Commander...")
-    def user(m, h): return "", h + [[m, None]]
-    def bot(h):
-        for r in stream_logic(h[-1][0], h[:-1]):
-            h[-1][1] = r
-            yield h
-    msg_input.submit(user, [msg_input, chatbot], [msg_input, chatbot], queue=False).then(bot, chatbot, chatbot)
+# 🔱 ၅။ UI SETUP (GRADIO MONOCHROME)
+with gr.Blocks(theme="monochrome", title="TELEFOXX OMNI-SYNC") as demo:
+    gr.Markdown("# 🔱 TELEFOXX OMNI-SYNC CORE\n**Status:** Operational")
+    with gr.Tab("Omni-Overseer"):
+        chatbot = gr.Chatbot()
+        msg_input = gr.Textbox(placeholder="အမိန့်ပေးပါ Commander...")
+        def user(m, h): return "", h + [[m, None]]
+        def bot(h):
+            for r in stream_logic(h[-1][0], h[:-1]):
+                h[-1][1] = r
+                yield h
+        msg_input.submit(user, [msg_input, chatbot], [msg_input, chatbot], queue=False).then(bot, chatbot, chatbot)
 
+    with gr.Tab("Expansion Control"):
+        status_box = gr.Textbox(label="Expansion Status")
+        gr.Button("🚀 Trigger Global Expansion").click(universal_hyper_ingest, [], status_box)
+
+# 🔱 ၆။ EXECUTION CONTROL
 if __name__ == "__main__":
     if os.getenv("HEADLESS_MODE") == "true":
+        print("🔱 TRIGGERING DATA PUMP & SYNC...")
         print(universal_hyper_ingest(limit=50))
-        sync_to_huggingface() # ဒီမှာ တိုက်ရိုက် Sync လုပ်မယ်
+        sync_to_huggingface()
         os._exit(0)
     else:
-        demo.launch(server_name="0.0.0.0", server_port=7860, theme="monochrome")
+        demo.launch(server_name="0.0.0.0", server_port=7860)
