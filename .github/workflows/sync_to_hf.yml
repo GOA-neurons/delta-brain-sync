@@ -1,44 +1,22 @@
-name: Sync to Hugging Face
+name: GOA Data Pipeline (HF to Neon)
 on:
-  push:
-    branches: [main] # မင်းရဲ့ Branch က master ဖြစ်နေရင် master လို့ ပြောင်းပေးပါ
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  sync_engine:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
-          fetch-depth: 0
-          lfs: true
-
-      # ၁။ 🔱 PUSH CODE TO HF (ULTIMATE FORCE-FEED METHOD)
-      - name: Push Code to HF
-        run: |
-          # Git Identity ကို CI ပတ်ဝန်းကျင်အတွက် သတ်မှတ်မယ်
-          git config --global user.email "commander@goa.com"
-          git config --global user.name "TELEFOXX"
-          
-          # Git ကို ဘာမေးခွင့်မှ မပေးအောင် Credential Helper ကို ပိတ်မယ်
-          git config --global credential.helper ""
-          
-          # 🔱 ဒါက အဓိက ဂိတ်ဆုံးနည်းလမ်းပဲ - Username နေရာမှာ 'token' လို့ သုံးပြီး Token ကို တိုက်ရိုက်ထိုးထည့်မယ်
-          # Format: https://token:YOUR_TOKEN@huggingface.co/spaces/USER/SPACE
-          git push --force https://token:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/TELEFOXX/GOA main
-
-      # ၂။ 🔱 SYNC SECRETS TO HF (API METHOD)
-      - name: Sync Secrets to HF
-        run: |
-          curl -X POST https://huggingface.co/api/spaces/TELEFOXX/GOA/variables \
-            -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "variables": [
-                {"key": "DATABASE_URL", "value": "${{ secrets.DATABASE_URL }}"},
-                {"key": "SUPABASE_URL", "value": "${{ secrets.SUPABASE_URL }}"},
-                {"key": "SUPABASE_KEY", "value": "${{ secrets.SUPABASE_KEY }}"},
-                {"key": "GROQ_API_KEY", "value": "${{ secrets.GROQ_API_KEY }}"},
-                {"key": "FIREBASE_CONFIG", "value": "${{ secrets.FIREBASE_CONFIG }}"}
-              ]
-            }'
-            
+          python-version: '3.11'
+      - name: Install
+        run: pip install datasets pandas sqlalchemy psycopg2-binary groq python-dotenv gradio
+      - name: Run Evolution
+        env:
+          NEON_KEY: ${{ secrets.NEON_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          HEADLESS_MODE: "true"
+        run: python app.py
