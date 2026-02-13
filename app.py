@@ -78,9 +78,12 @@ def fetch_neon_context():
 
 def stream_logic(msg, hist):
     context = fetch_neon_context()
-    sys_msg = f"CONTEXT: {context}\nမငျးက TelefoxX Overseer ဖွဈတယျ။"
+    sys_msg = f"CONTEXT: {context}\nမင်းက TelefoxX Overseer ဖြစ်တယ်။"
     messages = [{"role": "system", "content": sys_msg}]
-    for h in hist[-3:]: messages.append({"role": h['role'], "content": h['content']})
+    # Gradio 4 syntax compatibility
+    for h in hist: 
+        messages.append({"role": "user", "content": h[0]})
+        messages.append({"role": "assistant", "content": h[1]})
     messages.append({"role": "user", "content": msg})
     
     completion = client.chat.completions.create(model="llama-3.1-8b-instant", messages=messages, stream=True)
@@ -91,18 +94,25 @@ def stream_logic(msg, hist):
             yield ans
 
 # 🔱 GRADIO UI
-with gr.Blocks(theme="monochrome") as demo:
+with gr.Blocks() as demo:
     gr.Markdown("# 🔱 TELEFOXX OMNI-SYNC CORE")
     with gr.Tab("Omni-Overseer"):
-        chatbot = gr.Chatbot(type="messages")
-        msg_input = gr.Textbox(placeholder="အမိန့ျပေးပါ Commander...")
-        def chat_interface(message, history):
-            history.append({"role": "user", "content": message})
-            history.append({"role": "assistant", "content": ""})
-            for r in stream_logic(message, history[:-1]):
-                history[-1]["content"] = r
-                yield "", history
-        msg_input.submit(chat_interface, [msg_input, chatbot], [msg_input, chatbot])
+        chatbot = gr.Chatbot()
+        msg_input = gr.Textbox(placeholder="အမိန့်ပေးပါ Commander...")
+        
+        def user(user_message, history):
+            return "", history + [[user_message, None]]
+
+        def bot(history):
+            user_message = history[-1][0]
+            history[-1][1] = ""
+            for character in stream_logic(user_message, history[:-1]):
+                history[-1][1] = character
+                yield history
+
+        msg_input.submit(user, [msg_input, chatbot], [msg_input, chatbot], queue=False).then(
+            bot, chatbot, chatbot
+        )
 
     with gr.Tab("Core Config"):
         target_id = gr.Number(label="Neural ID")
@@ -117,4 +127,5 @@ if __name__ == "__main__":
         print(universal_hyper_ingest(limit=50))
         os._exit(0)
     else:
-        demo.launch(server_name="0.0.0.0", server_port=7860)
+        # Theme ကို launch ထဲမှာပဲ ထည့်လိုက်ပါတယ် (Gradio Warning ကျော်ရန်)
+        demo.launch(server_name="0.0.0.0", server_port=7860, theme="monochrome")
