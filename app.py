@@ -13,7 +13,7 @@ from groq import Groq
 # 🔱 ၁။ SYSTEM INITIALIZATION (Workflow & Security Matched)
 load_dotenv()
 
-# Workflow ထဲက NEON_KEY ကို ဦးစားပေးယူပြီး URL အဖြစ် သတ်မှတ်သည်
+# Workflow Secrets များကို ချိတ်ဆက်ခြင်း
 NEON_URL = os.environ.get("NEON_KEY") or os.environ.get("DATABASE_URL") or "postgresql://neondb_owner:npg_QUqg12MzNxnI@ep-divine-river-ahpf8fzb-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 HF_TOKEN = os.environ.get("HF_TOKEN")
@@ -84,13 +84,15 @@ def universal_hyper_ingest(limit=1000):
 
 # 🔱 ၃။ DIRECT SYNC (Security Validated for WRITE access)
 def sync_to_huggingface():
+    # Token ရှိမရှိ စစ်ဆေးခြင်း
     if not HF_TOKEN: 
         print("❌ No HF_TOKEN found in Environment Secrets.")
         return
     try:
         api = HfApi()
         print("🔱 Triggering Force Sync to Space Core...")
-        # Direct push to main branch with proper ignore patterns
+        
+        # Security Note: .git folder ကို ignore လုပ်ခြင်းဖြင့် Forbidden error ကို ကျော်လွှားသည်
         api.upload_folder(
             folder_path=".",
             repo_id="TELEFOXX/GOA",
@@ -98,13 +100,13 @@ def sync_to_huggingface():
             token=HF_TOKEN,
             commit_message="🔱 GOA TRINITY-SYNC: NEURAL EVOLUTION [EXPANDED]",
             revision="main",
-            create_pr=False,
+            create_pr=False, # PR မဆောက်ဘဲ Direct Push လုပ်ရန်
             ignore_patterns=[".git*", "__pycache__*", "*.pyc", "node_modules*", "venv*"]
         )
         print("🔱 Space Sync Complete.")
     except Exception as e:
         print(f"❌ HF Sync Forbidden: {e}")
-        print("💡 Tip: Ensure HF_TOKEN is in Repository Secrets (not Environment) and has WRITE role.")
+        print("💡 Tip: Hugging Face Settings > Tokens မှာ 'WRITE' role ရှိတဲ့ Token ကိုယူပြီး GitHub Repository Secret မှာ အသစ်ပြန်ထည့်ပါ။")
 
 # 🔱 ၄။ OMNI-OVERSEER CHAT LOGIC (DESC Order Matched)
 def fetch_neon_context():
@@ -148,6 +150,7 @@ with gr.Blocks(theme="monochrome") as demo:
 
 # 🔱 ၆။ EXECUTION (Workflow Step 1 Matched)
 if __name__ == "__main__":
+    # GitHub Actions တွင် HEADLESS_MODE ကို သုံး၍ အလိုအလျောက် Run စေသည်
     if os.environ.get("HEADLESS_MODE") == "true":
         print("🧬 Trinity Step 1: Ingesting Data...")
         print(universal_hyper_ingest(limit=1000))
