@@ -36,6 +36,7 @@ jobs:
           DATABASE_URL: ${{ secrets.NEON_KEY }}
           NEON_KEY: ${{ secrets.NEON_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           FIREBASE_KEY: ${{ secrets.FIREBASE_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
