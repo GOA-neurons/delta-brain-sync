@@ -11,6 +11,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          lfs: true
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -35,5 +36,9 @@ jobs:
         run: |
           git config --global user.email "commander@goa.com"
           git config --global user.name "TELEFOXX"
-          git remote add hf https://TELEFOXX:$HF_TOKEN@huggingface.co/spaces/TELEFOXX/GOA || true
-          git push hf main --force
+          
+          # 🔱 Authentication ကို URL ထဲမှာ တိုက်ရိုက်ထည့်သွင်းခြင်း (The Fix)
+          git remote set-url origin https://TELEFOXX:$HF_TOKEN@huggingface.co/spaces/TELEFOXX/GOA || git remote add origin https://TELEFOXX:$HF_TOKEN@huggingface.co/spaces/TELEFOXX/GOA
+          
+          # Force push လုပ်ပြီး Hugging Face ကို Update လုပ်ခိုင်းမယ်
+          git push origin main --force
