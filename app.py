@@ -9,7 +9,7 @@ from groq import Groq
 from datasets import load_dataset
 from sqlalchemy import create_engine
 
-# 🔱 ၁။ CORE TRINITY INITIALIZATION
+# 🔱 ၁။ CORE INITIALIZATION
 load_dotenv()
 NEON_URL = os.getenv("DATABASE_URL") or os.getenv("NEON_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -20,119 +20,89 @@ engine = create_engine(NEON_URL) if NEON_URL else None
 class HydraEngine:
     @staticmethod
     def compress(data):
-        """Data Injection မတိုင်ခင် Neural Compression လုပ်ခြင်း"""
         if not data: return ""
         return base64.b64encode(zlib.compress(data.encode('utf-8'))).decode('utf-8')
 
     @staticmethod
     def decompress(c):
-        """Neural Data ဖတ်ရှုရန် Extraction လုပ်ခြင်း"""
         try:
             return zlib.decompress(base64.b64decode(c)).decode('utf-8')
         except:
             return str(c)
 
-# 🔱 ၂။ NEURAL MANAGEMENT (EDIT & SYNC)
+# 🔱 ၂။ DATA PIPELINE LOGIC (HF TO NEON)
+def universal_hyper_ingest(domain_choice="Science_Global", limit=100):
+    """Hugging Face မှ ဒေတာများကို Neon ထဲသို့ အလိုအလျောက် စုပ်ယူခြင်း"""
+    if not engine: return "❌ Database Engine Not Initialized"
+    try:
+        print(f"📡 Ingesting {domain_choice} from Hugging Face...")
+        ds = load_dataset("arxiv_dataset", split='train', streaming=True, trust_remote_code=True)
+        records = []
+        for i, entry in enumerate(ds):
+            if i >= limit: break
+            records.append({
+                'science_domain': domain_choice,
+                'title': entry.get('title'),
+                'detail': HydraEngine.compress(entry.get('abstract', '')), # Match with original logic
+                'energy_stability': -500.0,
+                'master_sequence': entry.get('categories')
+            })
+        
+        df = pd.DataFrame(records)
+        df.to_sql('genesis_pipeline', engine, if_exists='append', index=False)
+        return f"✅ Successfully synced {len(records)} records to Neon."
+    except Exception as e:
+        return f"❌ Pipeline Error: {str(e)}"
+
+# 🔱 ၃။ NEURAL MANAGEMENT
 def update_neural_record(record_id, new_message):
-    """Database ထဲရှိ Neural Data ကို အမှားအယွင်းမရှိ Edit လုပ်ခြင်း"""
-    if not NEON_URL: return "❌ Error: Database Key Missing"
+    if not NEON_URL: return "❌ Database Key Missing"
     try:
         compressed_msg = HydraEngine.compress(new_message)
         conn = psycopg2.connect(NEON_URL)
         cur = conn.cursor()
-        # id ရော message ပါရှိမှ update လုပ်မည်
         cur.execute("UPDATE neurons SET message = %s WHERE id = %s", (compressed_msg, int(record_id)))
         conn.commit()
         cur.close(); conn.close()
-        return f"🔱 Neural Record {record_id} has been optimized and re-synced."
+        return f"🔱 Neural Record {record_id} Optimized."
     except Exception as e:
         return f"❌ System Error: {str(e)}"
 
-def universal_hyper_ingest(domain_choice, limit=500):
-    """Hugging Face မှ Science & Tech Data အားလုံးကို စုပ်ယူခြင်း"""
-    try:
-        # ArXiv သည် Science/Tech theories အတွက် အကောင်းဆုံးဖြစ်သည်
-        ds = load_dataset("arxiv_dataset", split='train', streaming=True, trust_remote_code=True)
-        records = []
-        count = 0
-        print(f"📡 Expanding Core via {domain_choice}...")
-        
-        for entry in ds:
-            if count >= limit: break
-            
-            # ဒေတာများကို HydraEngine ဖြင့် Encode လုပ်မည်
-            records.append({
-                'science_domain': domain_choice,
-                'title': entry.get('title'),
-                'detail': HydraEngine.compress(entry.get('abstract', '')),
-                'energy_stability': -500.0,
-                'master_sequence': entry.get('categories')
-            })
-            count += 1
-            
-        pd.DataFrame(records).to_sql('genesis_pipeline', engine, if_exists='append', index=False)
-        return f"✅ Expansion Successful: {count} {domain_choice} theories ingested."
-    except Exception as e:
-        return f"❌ Expansion Failed: {str(e)}"
-
-# 🔱 ၃။ OMNI-SYNC LOGIC (THE OVERSEER)
+# 🔱 ၄။ OMNI-SYNC CHAT LOGIC
 def fetch_neon_context():
     try:
         conn = psycopg2.connect(NEON_URL, connect_timeout=5)
         cur = conn.cursor()
-        # Hybrid Fetching: Neural memories နှင့် Science theories များကို ပေါင်းစပ်ယူမည်
         cur.execute("""
-            (SELECT user_id, message FROM neurons ORDER BY id DESC LIMIT 5)
+            (SELECT user_id, message FROM neurons ORDER BY id DESC LIMIT 3)
             UNION ALL
-            (SELECT science_domain, detail FROM genesis_pipeline ORDER BY random() LIMIT 5)
+            (SELECT science_domain, detail FROM genesis_pipeline ORDER BY id DESC LIMIT 3)
         """)
         rows = cur.fetchall()
         cur.close(); conn.close()
-        
-        if rows:
-            return " | ".join([f"[{r[0]}]: {HydraEngine.decompress(r[1])}" for r in rows])
-        return "Initial Directive Active"
-    except Exception as e:
-        return f"Matrix Sync Standby: {str(e)}"
+        return " | ".join([f"[{r[0]}]: {HydraEngine.decompress(r[1])}" for r in rows]) if rows else "Directive Active"
+    except:
+        return "Offline Mode"
 
 def stream_logic(msg, hist):
     context = fetch_neon_context()
-    system_message = (
-        f"MASTER CONTEXT: {context}\n\n"
-        "DIRECTIVE: မင်းဟာ TelefoxX Overseer ဖြစ်တယ်။ အထက်ပါ Context ထဲက သိပ္ပံအချက်အလက်တွေကိုပဲ သုံးပါ။ "
-        "မြန်မာလို ရှင်းလင်းပြတ်သားစွာ ဖြေဆိုပါ။ Hallucination လုံးဝမလုပ်ပါနဲ့။"
-    )
-    
-    messages = [{"role": "system", "content": system_message}]
-    for h in hist[-3:]: messages.append({"role": "user", "content": h['content']})
+    messages = [{"role": "system", "content": f"CONTEXT: {context}\nမင်းက TelefoxX Overseer ဖြစ်တယ်။"}]
+    for h in hist[-3:]: messages.append({"role": h['role'], "content": h['content']})
     messages.append({"role": "user", "content": msg})
-
-    try:
-        completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=messages,
-            temperature=0.1,
-            stream=True
-        )
-        ans = ""
-        for chunk in completion:
-            if chunk.choices[0].delta.content:
-                ans += chunk.choices[0].delta.content
-                yield ans
-    except Exception as e:
-        yield f"🔱 Matrix Link Lost: {str(e)}"
-
-# 🔱 ၄။ UI SETUP (GRADIO MONOCHROME)
-with gr.Blocks(theme="monochrome", title="TELEFOXX OMNI-SYNC") as demo:
-    gr.Markdown(f"# 🔱 TELEFOXX OMNI-SYNC CORE\n**Intelligence Status:** Operational")
     
+    completion = client.chat.completions.create(model="llama-3.1-8b-instant", messages=messages, stream=True)
+    ans = ""
+    for chunk in completion:
+        if chunk.choices[0].delta.content:
+            ans += chunk.choices[0].delta.content
+            yield ans
+
+# 🔱 ၅။ UI SETUP
+with gr.Blocks(theme="monochrome") as demo:
+    gr.Markdown("# 🔱 TELEFOXX OMNI-SYNC CORE")
     with gr.Tab("Omni-Overseer"):
         chatbot = gr.Chatbot(type="messages")
-        msg_input = gr.Textbox(placeholder="အမိန့်ပေးပါ Commander...", interactive=True)
-        msg_input.submit(lambda m, h: (h + [{"role": "user", "content": m}], ""), [msg_input, chatbot], [chatbot, msg_input]).then(
-            respond_wrapper := (lambda h: (h, h)), [chatbot], [chatbot] # Simple stream handling
-        )
-        # Note: Simplified respond logic for standard Gradio deployment
+        msg_input = gr.Textbox()
         def chat_interface(message, history):
             history.append({"role": "user", "content": message})
             history.append({"role": "assistant", "content": ""})
@@ -142,16 +112,18 @@ with gr.Blocks(theme="monochrome", title="TELEFOXX OMNI-SYNC") as demo:
         msg_input.submit(chat_interface, [msg_input, chatbot], [msg_input, chatbot])
 
     with gr.Tab("Core Configuration"):
-        with gr.Row():
-            target_id = gr.Number(label="Neural ID")
-            update_val = gr.Textbox(label="New Intelligence String")
-        update_btn = gr.Button("🔱 Execute Neural Rewrite")
-        update_btn.click(update_neural_record, [target_id, update_val], gr.Textbox(label="Status"))
-        
+        target_id = gr.Number(label="Neural ID")
+        update_val = gr.Textbox(label="New String")
+        gr.Button("Rewrite").click(update_neural_record, [target_id, update_val], gr.Textbox())
         gr.Markdown("---")
-        domain_sel = gr.Dropdown(["Aerospace_Propulsion", "Quantum_Theories", "AI_Logic", "Bio_Engineering"], label="Expansion Domain")
-        ingest_btn = gr.Button("🚀 Trigger Global Expansion")
-        ingest_btn.click(universal_hyper_ingest, [domain_sel], gr.Textbox(label="Pipeline History"))
+        gr.Button("🚀 Trigger Global Expansion").click(universal_hyper_ingest, [], gr.Textbox())
 
+# 🔱 ၆။ HEADLESS EXECUTION CONTROL
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    if os.getenv("HEADLESS_MODE") == "true":
+        print("🚀 GITHUB ACTION DETECTED: STARTING AUTO-INGESTION...")
+        result = universal_hyper_ingest(limit=50) # GitHub မှာ Run တိုင်း ဒေတာ ၅၀ စီ သွင်းမယ်
+        print(result)
+        os._exit(0) # အတင်းအကျပ် ပိတ်ခိုင်းခြင်း (Hang မနေအောင်)
+    else:
+        demo.launch()
