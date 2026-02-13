@@ -1,17 +1,27 @@
+# --- CORE CONNECTIVITY ---
 groq
-gradio==5.50.0
+gradio==4.44.1
 psycopg2-binary
-requests
+sqlalchemy
 python-dotenv
-sentence-transformers
+python-multipart
+requests
+
+# --- DATA FUSION & PIPELINE ---
+datasets
+pandas
 numpy
+
+# --- NEURAL ENGINES (AI & VISION) ---
+sentence-transformers
+transformers
 diffusers
 torch
 torchvision
 accelerate
-transformers
+safetensors
+
+# --- IMAGE PROCESSING ---
 opencv-python
 Pillow
-python-multipart
-safetensors
 ftfy
